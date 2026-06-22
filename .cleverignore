@@ -1,0 +1,28 @@
+# ─── .cleverignore — files excluded from Clever Cloud build context ─────────
+# This speeds up `git push clever` by not sending large or unnecessary files.
+# Syntax is identical to .gitignore.
+# NOTE: Do NOT exclude anything that the Dockerfile COPY instructions reference.
+
+# Python virtualenv and caches (not needed — Docker rebuilds from scratch)
+backend/.venv
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+backend/.mypy_cache
+backend/.ruff_cache
+backend/.coverage
+
+# Node.js build artifacts (Docker rebuilds from scratch)
+frontend/node_modules
+frontend/.next
+frontend/.turbo
+
+# Local dev log files
+*.log
+
+# Documentation (not needed at runtime)
+docs/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+# ─── Backend Dockerfile (Approach B: single app with nginx + supervisord) ───
+# In production, nginx on port 8080 routes /v1/* and /api/admin/* to FastAPI,
+# everything else to Next.js. For local dev the backend can also run standalone.
+
+FROM python:3.12-slim AS backend-base
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev curl supervisor nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/pyproject.toml backend/uv.lock* ./
+RUN pip install --upgrade pip && pip install uv && uv sync --frozen --no-dev
+COPY backend/ ./backend/
+
+WORKDIR /app/backend
+
+EXPOSE 8080
+
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

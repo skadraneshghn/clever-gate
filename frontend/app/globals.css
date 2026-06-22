@@ -1,0 +1,170 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Premium Animated Mesh Gradient Background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+  background: linear-gradient(-45deg, #f1f3f9, #fafbfe, #eef2ff, #f8f6fc);
+  background-size: 400% 400%;
+  animation: bg-gradient 25s ease infinite;
+}
+
+[data-mantine-color-scheme="dark"] body::before {
+  background: linear-gradient(-45deg, #090a0f, #111422, #0d0f17, #160e24);
+  background-size: 400% 400%;
+}
+
+@keyframes bg-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Translucent Glassmorphism variables */
+:root {
+  --mantine-color-body: rgba(255, 255, 255, 0.45) !important;
+}
+
+[data-mantine-color-scheme="dark"] {
+  --mantine-color-body: rgba(13, 16, 23, 0.6) !important;
+}
+
+/* Glassmorphic AppShell components */
+.mantine-AppShell-header {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-AppShell-header {
+  background-color: rgba(13, 16, 23, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.mantine-AppShell-navbar {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-AppShell-navbar {
+  background-color: rgba(13, 16, 23, 0.35) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Premium Card Glass Styling with Subtle Hover Transitions */
+.mantine-Card-root {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Card-root {
+  background-color: rgba(20, 24, 38, 0.35) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* Solid backgrounds for Drawer and Modal to ensure legibility and isolate them from the underlying page content */
+.mantine-Drawer-content, .mantine-Modal-content {
+  background-color: #ffffff !important;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Drawer-content,
+[data-mantine-color-scheme="dark"] .mantine-Modal-content {
+  background-color: #141724 !important;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.4) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.mantine-Drawer-header, .mantine-Modal-header {
+  background-color: transparent !important;
+}
+
+/* ── Table row entrance (CSS-only, GPU-friendly) ────────────────────── */
+@keyframes cg-row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Subtle floating decorative orbs (dashboard layout) ─────────────── */
+.cg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.cg-orb-1 {
+  width: 380px; height: 380px;
+  top: -60px; right: 10%;
+  background: radial-gradient(circle, rgba(106, 118, 252, 0.12) 0%, rgba(106, 118, 252, 0) 70%);
+  animation: cg-float-a 20s ease-in-out infinite;
+}
+
+.cg-orb-2 {
+  width: 320px; height: 320px;
+  bottom: 5%; left: 8%;
+  background: radial-gradient(circle, rgba(230, 73, 128, 0.08) 0%, rgba(230, 73, 128, 0) 70%);
+  animation: cg-float-b 25s ease-in-out infinite;
+}
+
+@keyframes cg-float-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, 30px) scale(1.1); }
+  66%      { transform: translate(-20px, 50px) scale(0.95); }
+}
+
+@keyframes cg-float-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-30px, -40px) scale(1.15); }
+}
+
+/* ── Animated gradient text (for login title) ───────────────────────── */
+.cg-gradient-text {
+  background: linear-gradient(135deg, #6a76fc, #be4bdb, #e64980);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: cg-gradient-shift 6s ease infinite;
+}
+
+@keyframes cg-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── Respect reduced-motion preferences ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "apps": [
+    {
+      "app_id": "app_55f6e4eb-0ebb-4059-a127-090ee19fceca",
+      "alias": "clever-gateway",
+      "name": "Clever Gateway",
+      "instance_type": "docker",
+      "region": "par"
+    }
+  ]
+}

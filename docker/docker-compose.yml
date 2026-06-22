@@ -1,0 +1,54 @@
+# Local development docker-compose for Clever Gateway.
+# NOTE: Clever Cloud does not support docker-compose; this is for local dev only.
+# In production, separate Docker apps are deployed (see docs/DESIGN-EN.md §16).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cg
+      POSTGRES_PASSWORD: cg
+      POSTGRES_DB: clever_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cg -d clever_gateway"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    env_file: ../.env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cg:cg@postgres:5432/clever_gateway
+      REDIS_URL: redis://redis:6379/0
+      CG_ENV: development
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "cd /app/backend &&
+             alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1"
+
+volumes:
+  pgdata:
