@@ -70,14 +70,15 @@ ENV UV_PYTHON=/usr/bin/python3.12
 # ── Backend: install Python dependencies ─────────────────────────────────────
 WORKDIR /app
 
-# Copy lockfiles first (better Docker layer caching)
+# Copy lockfiles first for dependency-only cache layer
+# --no-install-project: install deps only, skip building the package itself
+# (avoids needing README.md at this stage — pyproject.toml references it)
 COPY backend/pyproject.toml backend/uv.lock* ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# uv creates /app/.venv and installs from uv.lock (frozen, prod only)
-RUN uv sync --frozen --no-dev
-
-# Copy backend source code
+# Copy full backend source, then install the project itself into the venv
 COPY backend/ ./backend/
+RUN uv sync --frozen --no-dev
 
 # ── Frontend: copy Next.js standalone build ───────────────────────────────────
 COPY --from=frontend-build /fe/.next/standalone /app/frontend-standalone
