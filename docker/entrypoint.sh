@@ -47,7 +47,7 @@ fi
 echo ""
 echo "[2/3] Running database migrations..."
 cd /app/backend
-uv run alembic upgrade head
+/app/.venv/bin/alembic upgrade head
 echo "    Migrations complete."
 
 # ── 3. Start supervisord ───────────────────────────────────────────────────────
