@@ -3,7 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Stack, Group, Button, SimpleGrid, Text, Card, ThemeIcon } from "@mantine/core";
 import { motion } from "framer-motion";
-import { FiDatabase, FiTrash2, FiZap, FiCheckCircle, FiHardDrive } from "react-icons/fi";
+import {
+  AnimatedDatabase,
+  AnimatedTrash,
+  AnimatedZap,
+  AnimatedCheckCircle,
+  AnimatedHardDrive,
+} from "../../../components/cg/AnimatedIcons";
 import { CgStat, useCgConfirm, useToast } from "../../../components/cg";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, AnimatedNumber } from "../../../components/anim";
@@ -44,7 +50,7 @@ export default function CachePage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiDatabase size={22} />}
+        icon={<AnimatedDatabase size={22} />}
         iconColor="#7c3aed"
         title="Cache Management"
         description="Manage the L1 exact-match response cache"
@@ -56,7 +62,7 @@ export default function CachePage() {
             <CgStat
               title="Cache Entries"
               value={<AnimatedNumber value={stats?.total_entries ?? 0} />}
-              icon={<FiHardDrive size={18} />}
+              icon={<AnimatedHardDrive size={18} />}
               color="brand"
             />
           </MotionItem>
@@ -64,12 +70,12 @@ export default function CachePage() {
             <CgStat
               title="Total Hits"
               value={<AnimatedNumber value={stats?.total_hits ?? 0} />}
-              icon={<FiCheckCircle size={18} />}
+              icon={<AnimatedCheckCircle size={18} />}
               color="green"
             />
           </MotionItem>
           <MotionItem>
-            <CgStat title="Status" value="Active" subtitle="L1 exact cache" icon={<FiZap size={18} />} color="grape" />
+            <CgStat title="Status" value="Active" subtitle="L1 exact cache" icon={<AnimatedZap size={18} />} color="grape" />
           </MotionItem>
         </SimpleGrid>
       </MotionSection>
@@ -80,7 +86,7 @@ export default function CachePage() {
             <Stack gap="md">
               <Group gap="sm">
                 <ThemeIcon size={36} radius="md" variant="light" color="red">
-                  <FiTrash2 size={18} />
+                  <AnimatedTrash size={18} />
                 </ThemeIcon>
                 <Stack gap={0}>
                   <Text fw={700} size="sm">Cache Invalidation</Text>
@@ -90,8 +96,8 @@ export default function CachePage() {
                 </Stack>
               </Group>
               <Group>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="light" color="red" leftSection={<FiTrash2 size={16} />} onClick={handleInvalidate}>
+                <motion.div whileHover="hover" whileTap={{ scale: 0.98 }}>
+                  <Button variant="light" color="red" leftSection={<AnimatedTrash size={16} />} onClick={handleInvalidate}>
                     Invalidate All
                   </Button>
                 </motion.div>

@@ -17,8 +17,19 @@ import {
   Card,
   PasswordInput,
 } from "@mantine/core";
-import { IconPlus, IconEdit, IconTrash, IconFlask } from "@tabler/icons-react";
-import { FiLayers, FiServer, FiGitBranch, FiKey, FiCheckCircle, FiXCircle } from "react-icons/fi";
+import { motion } from "framer-motion";
+import {
+  AnimatedPlus,
+  AnimatedEdit,
+  AnimatedTrash,
+  AnimatedFlask,
+  AnimatedLayers,
+  AnimatedServer,
+  AnimatedGitBranch,
+  AnimatedKey,
+  AnimatedCheckCircle,
+  AnimatedXCircle,
+} from "../../../components/cg/AnimatedIcons";
 import {
   CgTable,
   CgDrawer,
@@ -125,7 +136,7 @@ export default function ProvidersPage() {
       key: "is_enabled",
       label: "Status",
       render: (p) => (
-        <Badge variant="light" color={p.is_enabled ? "green" : "gray"} size="sm" leftSection={p.is_enabled ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}>
+        <Badge variant="light" color={p.is_enabled ? "green" : "gray"} size="sm" leftSection={p.is_enabled ? <AnimatedCheckCircle size={12} /> : <AnimatedXCircle size={12} />}>
           {p.is_enabled ? "enabled" : "disabled"}
         </Badge>
       ),
@@ -135,14 +146,14 @@ export default function ProvidersPage() {
       label: "",
       render: (p) => (
         <Group gap="xs">
-          <ActionIcon variant="subtle" onClick={() => { setEditing(p); setDrawerOpen(true); }}>
-            <IconEdit size={16} />
+          <ActionIcon variant="subtle" onClick={() => { setEditing(p); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
+            <AnimatedEdit size={16} />
           </ActionIcon>
-          <ActionIcon variant="subtle" color="teal" onClick={() => handleTest(p.id)}>
-            <IconFlask size={16} />
+          <ActionIcon variant="subtle" color="teal" onClick={() => handleTest(p.id)} component={motion.button} whileHover="hover">
+            <AnimatedFlask size={16} />
           </ActionIcon>
-          <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("providers", p.id)}>
-            <IconTrash size={16} />
+          <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("providers", p.id)} component={motion.button} whileHover="hover">
+            <AnimatedTrash size={16} />
           </ActionIcon>
         </Group>
       ),
@@ -158,7 +169,7 @@ export default function ProvidersPage() {
       key: "is_enabled",
       label: "Status",
       render: (d) => (
-        <Badge variant="light" color={d.is_enabled ? "green" : "gray"} size="sm" leftSection={d.is_enabled ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}>
+        <Badge variant="light" color={d.is_enabled ? "green" : "gray"} size="sm" leftSection={d.is_enabled ? <AnimatedCheckCircle size={12} /> : <AnimatedXCircle size={12} />}>
           {d.is_enabled ? "enabled" : "disabled"}
         </Badge>
       ),
@@ -168,11 +179,11 @@ export default function ProvidersPage() {
       label: "",
       render: (d) => (
         <Group gap="xs">
-          <ActionIcon variant="subtle" onClick={() => { setEditing(d); setDrawerOpen(true); }}>
-            <IconEdit size={16} />
+          <ActionIcon variant="subtle" onClick={() => { setEditing(d); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
+            <AnimatedEdit size={16} />
           </ActionIcon>
-          <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("deployments", d.id)}>
-            <IconTrash size={16} />
+          <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("deployments", d.id)} component={motion.button} whileHover="hover">
+            <AnimatedTrash size={16} />
           </ActionIcon>
         </Group>
       ),
@@ -186,7 +197,7 @@ export default function ProvidersPage() {
       key: "is_enabled",
       label: "Status",
       render: (k) => (
-        <Badge variant="light" color={k.is_enabled ? "green" : "gray"} size="sm" leftSection={k.is_enabled ? <FiCheckCircle size={12} /> : <FiXCircle size={12} />}>
+        <Badge variant="light" color={k.is_enabled ? "green" : "gray"} size="sm" leftSection={k.is_enabled ? <AnimatedCheckCircle size={12} /> : <AnimatedXCircle size={12} />}>
           {k.is_enabled ? "enabled" : "disabled"}
         </Badge>
       ),
@@ -195,8 +206,8 @@ export default function ProvidersPage() {
       key: "actions",
       label: "",
       render: (k) => (
-        <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("keys", k.id)}>
-          <IconTrash size={16} />
+        <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("keys", k.id)} component={motion.button} whileHover="hover">
+          <AnimatedTrash size={16} />
         </ActionIcon>
       ),
     },
@@ -205,14 +216,14 @@ export default function ProvidersPage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiLayers size={22} />}
+        icon={<AnimatedLayers size={22} />}
         iconColor="#0d9488"
         title="Providers Management"
         description="Configure AI providers, deployments, and API keys"
         actions={
           <FadeIn delay={0.1}>
             <Button
-              leftSection={<IconPlus size={16} />}
+              leftSection={<AnimatedPlus size={16} />}
               onClick={() => { setEditing(null); setDrawerOpen(true); }}
               variant="gradient"
               gradient={{ from: "brand", to: "teal", deg: 90 }}
@@ -225,9 +236,9 @@ export default function ProvidersPage() {
 
       <Tabs value={tab} onChange={(v) => setTab(v as Tab)}>
         <Tabs.List>
-          <Tabs.Tab value="providers" leftSection={<FiServer size={16} style={{ color: "#0d9488" }} />}>Providers</Tabs.Tab>
-          <Tabs.Tab value="deployments" leftSection={<FiGitBranch size={16} style={{ color: "#ea580c" }} />}>Deployments</Tabs.Tab>
-          <Tabs.Tab value="keys" leftSection={<FiKey size={16} style={{ color: "#d97706" }} />}>Provider Keys</Tabs.Tab>
+          <Tabs.Tab value="providers" leftSection={<AnimatedServer size={16} style={{ color: "#0d9488" }} />}>Providers</Tabs.Tab>
+          <Tabs.Tab value="deployments" leftSection={<AnimatedGitBranch size={16} style={{ color: "#ea580c" }} />}>Deployments</Tabs.Tab>
+          <Tabs.Tab value="keys" leftSection={<AnimatedKey size={16} style={{ color: "#d97706" }} />}>Provider Keys</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="providers" pt="md">
@@ -323,7 +334,7 @@ function ProviderDrawer({
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Provider" : "Add Provider"} icon={<FiServer size={16} />} iconColor="teal">
+    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Provider" : "Add Provider"} icon={<AnimatedServer size={16} />} iconColor="teal">
       <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
       {!editing && (
         <Select label="Adapter Type" value={adapterType} onChange={(v) => setAdapterType(v || "litellm")} data={[{ value: "litellm", label: "litellm" }]} />
@@ -381,7 +392,7 @@ function DeploymentDrawer({
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Deployment" : "Add Deployment"} size="lg" icon={<FiGitBranch size={16} />} iconColor="orange">
+    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Deployment" : "Add Deployment"} size="lg" icon={<AnimatedGitBranch size={16} />} iconColor="orange">
       <Select label="Provider" value={providerId} onChange={(v) => setProviderId(v ?? "")} disabled={!!editing}
         data={providers.map((p) => ({ value: p.id, label: p.name }))} />
       <TextInput label="Model Name (alias)" value={modelName} onChange={(e) => setModelName(e.target.value)} required />
@@ -422,7 +433,7 @@ function ProviderKeyDrawer({
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title="Add Provider Key" icon={<FiKey size={16} />} iconColor="orange">
+    <CgDrawer opened={opened} onClose={onClose} title="Add Provider Key" icon={<AnimatedKey size={16} />} iconColor="orange">
       <Select label="Provider" value={providerId} onChange={(v) => setProviderId(v ?? "")}
         data={providers.map((p) => ({ value: p.id, label: p.name }))} />
       <TextInput label="Label" value={label} onChange={(e) => setLabel(e.target.value)} required />

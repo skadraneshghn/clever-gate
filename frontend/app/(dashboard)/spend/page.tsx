@@ -2,8 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Stack, SimpleGrid } from "@mantine/core";
-import { IconCoins, IconBrain, IconActivity, IconPercentage } from "@tabler/icons-react";
-import { FiDollarSign } from "react-icons/fi";
+import {
+  AnimatedCoins,
+  AnimatedBrain,
+  AnimatedActivity,
+  AnimatedRefreshCw,
+  AnimatedDollarSign,
+} from "../../../components/cg/AnimatedIcons";
 import { CgStat, CgTable, type CgColumn } from "../../../components/cg";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, AnimatedNumber } from "../../../components/anim";
@@ -41,7 +46,7 @@ export default function SpendPage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiDollarSign size={22} />}
+        icon={<AnimatedDollarSign size={22} />}
         iconColor="#16a34a"
         title="Spend & Cost"
         description="Track token usage and cost across all providers"
@@ -50,21 +55,21 @@ export default function SpendPage() {
       <MotionSection>
         <SimpleGrid cols={{ base: 2, md: 4 }}>
           <MotionItem>
-            <CgStat title="Total Spend" value={`$${(metrics?.total_cost_usd ?? 0).toFixed(2)}`} icon={<IconCoins size={20} />} color="orange" />
+            <CgStat title="Total Spend" value={`$${(metrics?.total_cost_usd ?? 0).toFixed(2)}`} icon={<AnimatedCoins size={20} />} color="orange" />
           </MotionItem>
           <MotionItem>
             <CgStat
               title="Total Tokens"
               value={<AnimatedNumber value={metrics?.total_tokens ?? 0} />}
-              icon={<IconBrain size={20} />}
+              icon={<AnimatedBrain size={20} />}
               color="brand"
             />
           </MotionItem>
           <MotionItem>
-            <CgStat title="Error Rate" value={`${((metrics?.error_rate ?? 0) * 100).toFixed(1)}%`} icon={<IconActivity size={20} />} color="red" />
+            <CgStat title="Error Rate" value={`${((metrics?.error_rate ?? 0) * 100).toFixed(1)}%`} icon={<AnimatedActivity size={20} />} color="red" />
           </MotionItem>
           <MotionItem>
-            <CgStat title="Avg Latency" value={`${Math.round(metrics?.avg_latency_ms ?? 0)} ms`} icon={<IconPercentage size={20} />} color="grape" />
+            <CgStat title="Avg Latency" value={`${Math.round(metrics?.avg_latency_ms ?? 0)} ms`} icon={<AnimatedRefreshCw size={20} />} color="grape" />
           </MotionItem>
         </SimpleGrid>
       </MotionSection>

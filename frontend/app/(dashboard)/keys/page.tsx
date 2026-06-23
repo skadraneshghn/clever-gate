@@ -4,14 +4,22 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Stack, Group, Button, Badge, ActionIcon, TextInput, Select, Alert, Text, CopyButton,
 } from "@mantine/core";
-import { IconPlus, IconTrash, IconCopy, IconCheck } from "@tabler/icons-react";
-import { FiKey, FiCheckCircle, FiXCircle } from "react-icons/fi";
+import {
+  AnimatedPlus,
+  AnimatedTrash,
+  AnimatedCopy,
+  AnimatedCheck,
+  AnimatedKey,
+  AnimatedCheckCircle,
+  AnimatedXCircle,
+} from "../../../components/cg/AnimatedIcons";
 import {
   CgTable, CgDrawer, useCgConfirm, useToast, type CgColumn,
 } from "../../../components/cg";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, FadeIn } from "../../../components/anim";
 import { api } from "../../../lib";
+import { motion } from "framer-motion";
 import type { Paginated, ApiKey, ApiKeyCreated, User } from "../../../lib/types";
 
 export default function KeysPage() {
@@ -48,7 +56,7 @@ export default function KeysPage() {
     },
     {
       key: "is_active", label: "Status",
-      render: (k) => <Badge variant="light" color={k.is_active ? "green" : "gray"} size="xs" leftSection={k.is_active ? <FiCheckCircle size={10} /> : <FiXCircle size={10} />}>{k.is_active ? "active" : "revoked"}</Badge>,
+      render: (k) => <Badge variant="light" color={k.is_active ? "green" : "gray"} size="xs" leftSection={k.is_active ? <AnimatedCheckCircle size={10} /> : <AnimatedXCircle size={10} />}>{k.is_active ? "active" : "revoked"}</Badge>,
     },
     { key: "last_used_at", label: "Last Used", render: (k) => k.last_used_at ?? "—" },
     {
@@ -61,8 +69,8 @@ export default function KeysPage() {
             try { await api.delete(`/api/admin/api-keys/${k.id}`); toast("Key revoked", "success"); await load(); }
             catch (e) { toast(e instanceof Error ? e.message : "Revoke failed", "error"); }
           },
-        })}>
-          <IconTrash size={16} />
+        })} component={motion.button} whileHover="hover">
+          <AnimatedTrash size={16} />
         </ActionIcon>
       ),
     },
@@ -71,26 +79,26 @@ export default function KeysPage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiKey size={22} />}
+        icon={<AnimatedKey size={22} />}
         iconColor="#d97706"
         title="Virtual Keys"
         description="Generate and manage API keys for users"
         actions={
           <FadeIn delay={0.1}>
-            <Button leftSection={<IconPlus size={16} />} onClick={() => setDrawerOpen(true)} variant="gradient" gradient={{ from: "brand", to: "orange", deg: 90 }}>Generate Key</Button>
+            <Button leftSection={<AnimatedPlus size={16} />} onClick={() => setDrawerOpen(true)} variant="gradient" gradient={{ from: "brand", to: "orange", deg: 90 }}>Generate Key</Button>
           </FadeIn>
         }
       />
 
       {createdKey && (
         <FadeIn>
-          <Alert icon={<IconCheck size={16} />} color="orange" variant="light" withCloseButton onClose={() => setCreatedKey(null)}>
+          <Alert icon={<AnimatedCheck size={16} />} color="orange" variant="light" withCloseButton onClose={() => setCreatedKey(null)}>
             <Group gap="sm">
               <Text size="sm">New key (shown once):</Text>
               <Text ff="monospace" size="xs">{createdKey}</Text>
               <CopyButton value={createdKey} timeout={2000}>
                 {({ copied, copy }) => (
-                  <Button size="xs" variant="subtle" onClick={copy} leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}>
+                  <Button size="xs" variant="subtle" onClick={copy} leftSection={copied ? <AnimatedCheck size={14} /> : <AnimatedCopy size={14} />}>
                     {copied ? "Copied" : "Copy"}
                   </Button>
                 )}
@@ -138,7 +146,7 @@ function KeyDrawer({ opened, onClose, users, onCreated }: {
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title="Generate Virtual Key" icon={<FiKey size={16} />} iconColor="orange">
+    <CgDrawer opened={opened} onClose={onClose} title="Generate Virtual Key" icon={<AnimatedKey size={16} />} iconColor="orange">
       <Select label="User" value={userId} onChange={(v) => setUserId(v ?? "")} required
         data={users.map((u) => ({ value: u.id, label: `${u.username} (${u.email})` }))} />
       <TextInput label="Name (optional)" value={name} onChange={(e) => setName(e.target.value)} />

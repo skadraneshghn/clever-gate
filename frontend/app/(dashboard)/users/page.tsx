@@ -4,14 +4,22 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Stack, Group, Button, Badge, ActionIcon, TextInput, PasswordInput, Switch, Text,
 } from "@mantine/core";
-import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { FiUsers, FiUserCheck, FiUserX, FiShield } from "react-icons/fi";
+import {
+  AnimatedPlus,
+  AnimatedEdit,
+  AnimatedTrash,
+  AnimatedUsers,
+  AnimatedUserCheck,
+  AnimatedUserX,
+  AnimatedShield,
+} from "../../../components/cg/AnimatedIcons";
 import {
   CgTable, CgDrawer, useCgConfirm, useToast, type CgColumn,
 } from "../../../components/cg";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, FadeIn } from "../../../components/anim";
 import { api } from "../../../lib";
+import { motion } from "framer-motion";
 import type { Paginated, User } from "../../../lib/types";
 
 export default function UsersPage() {
@@ -39,8 +47,8 @@ export default function UsersPage() {
       key: "roles", label: "Roles",
       render: (u) => (
         <Group gap="xs">
-          {u.is_admin && <Badge variant="light" color="grape" size="xs" leftSection={<FiShield size={10} />}>admin</Badge>}
-          <Badge variant="light" color={u.is_active ? "green" : "gray"} size="xs" leftSection={u.is_active ? <FiUserCheck size={10} /> : <FiUserX size={10} />}>
+          {u.is_admin && <Badge variant="light" color="grape" size="xs" leftSection={<AnimatedShield size={10} />}>admin</Badge>}
+          <Badge variant="light" color={u.is_active ? "green" : "gray"} size="xs" leftSection={u.is_active ? <AnimatedUserCheck size={10} /> : <AnimatedUserX size={10} />}>
             {u.is_active ? "active" : "disabled"}
           </Badge>
         </Group>
@@ -51,8 +59,8 @@ export default function UsersPage() {
       key: "actions", label: "",
       render: (u) => (
         <Group gap="xs">
-          <ActionIcon variant="subtle" onClick={() => { setEditing(u); setDrawerOpen(true); }}>
-            <IconEdit size={16} />
+          <ActionIcon variant="subtle" onClick={() => { setEditing(u); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
+            <AnimatedEdit size={16} />
           </ActionIcon>
           <ActionIcon variant="subtle" color="red" onClick={() => confirm({
             title: "Delete user",
@@ -62,8 +70,8 @@ export default function UsersPage() {
               try { await api.delete(`/api/admin/users/${u.id}`); toast("User deleted", "success"); await load(); }
               catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); }
             },
-          })}>
-            <IconTrash size={16} />
+          })} component={motion.button} whileHover="hover">
+            <AnimatedTrash size={16} />
           </ActionIcon>
         </Group>
       ),
@@ -73,13 +81,13 @@ export default function UsersPage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiUsers size={22} />}
+        icon={<AnimatedUsers size={22} />}
         iconColor="#db2777"
         title="Users & Teams"
         description="Manage admin users, roles, and access"
         actions={
           <FadeIn delay={0.1}>
-            <Button leftSection={<IconPlus size={16} />} onClick={() => { setEditing(null); setDrawerOpen(true); }} variant="gradient" gradient={{ from: "brand", to: "pink", deg: 90 }}>
+            <Button leftSection={<AnimatedPlus size={16} />} onClick={() => { setEditing(null); setDrawerOpen(true); }} variant="gradient" gradient={{ from: "brand", to: "pink", deg: 90 }}>
               Add User
             </Button>
           </FadeIn>
@@ -138,7 +146,7 @@ function UserDrawer({ opened, onClose, editing, onSaved }: {
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit User" : "Add User"} icon={<FiUsers size={16} />} iconColor="grape">
+    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit User" : "Add User"} icon={<AnimatedUsers size={16} />} iconColor="grape">
       <TextInput label="Username" value={username} onChange={(e) => setUsername(e.target.value)} disabled={!!editing} required />
       <TextInput label="Email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!editing} required />
       {!editing && <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />}

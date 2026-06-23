@@ -14,19 +14,19 @@ import {
   Tooltip,
 } from "@mantine/core";
 import {
-  FiGrid,
-  FiLayers,
-  FiGitMerge,
-  FiUsers,
-  FiKey,
-  FiDollarSign,
-  FiActivity,
-  FiDatabase,
-  FiSettings,
-  FiZap,
-  FiTerminal,
-  FiLogOut,
-} from "react-icons/fi";
+  AnimatedGrid,
+  AnimatedLayers,
+  AnimatedGitMerge,
+  AnimatedKey,
+  AnimatedActivity,
+  AnimatedTerminal,
+  AnimatedDollarSign,
+  AnimatedDatabase,
+  AnimatedUsers,
+  AnimatedSettings,
+  AnimatedZap,
+  AnimatedLogOut,
+} from "../cg/AnimatedIcons";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -36,31 +36,31 @@ const groupedNav = [
   {
     title: "Gateway",
     items: [
-      { href: "/", label: "Dashboard", icon: <FiGrid size={16} />, color: "#5360f8" },     // Indigo-blue
-      { href: "/providers", label: "Providers", icon: <FiLayers size={16} />, color: "#0d9488" }, // Teal
-      { href: "/models", label: "Models & Routing", icon: <FiGitMerge size={16} />, color: "#ea580c" }, // Orange
-      { href: "/keys", label: "Virtual Keys", icon: <FiKey size={16} />, color: "#d97706" },     // Amber
+      { href: "/", label: "Dashboard", icon: AnimatedGrid, color: "#3f72af" },
+      { href: "/providers", label: "Providers", icon: AnimatedLayers, color: "#428475" },
+      { href: "/models", label: "Models & Routing", icon: AnimatedGitMerge, color: "#ea580c" },
+      { href: "/keys", label: "Virtual Keys", icon: AnimatedKey, color: "#d97706" },
     ],
   },
   {
     title: "Monitoring",
     items: [
-      { href: "/monitoring", label: "Monitoring", icon: <FiActivity size={16} />, color: "#0891b2" }, // Cyan
-      { href: "/logs", label: "System Logs", icon: <FiTerminal size={16} />, color: "#2563eb" }, // Blue
+      { href: "/monitoring", label: "Monitoring", icon: AnimatedActivity, color: "#0891b2" },
+      { href: "/logs", label: "System Logs", icon: AnimatedTerminal, color: "#2563eb" },
     ],
   },
   {
     title: "Management",
     items: [
-      { href: "/spend", label: "Spend & Cost", icon: <FiDollarSign size={16} />, color: "#16a34a" }, // Green
-      { href: "/cache", label: "Cache", icon: <FiDatabase size={16} />, color: "#7c3aed" },       // Violet
-      { href: "/users", label: "Users & Teams", icon: <FiUsers size={16} />, color: "#db2777" },  // Pink
+      { href: "/spend", label: "Spend & Cost", icon: AnimatedDollarSign, color: "#16a34a" },
+      { href: "/cache", label: "Cache", icon: AnimatedDatabase, color: "#7c3aed" },
+      { href: "/users", label: "Users & Teams", icon: AnimatedUsers, color: "#db2777" },
     ],
   },
   {
     title: "System",
     items: [
-      { href: "/settings", label: "Settings", icon: <FiSettings size={16} />, color: "#6b7280" },   // Gray
+      { href: "/settings", label: "Settings", icon: AnimatedSettings, color: "#6b7280" },
     ],
   },
 ];
@@ -98,13 +98,13 @@ export function Sidebar() {
               size={36}
               radius="md"
               variant="gradient"
-              gradient={{ from: "brand", to: "grape", deg: 45 }}
+              gradient={{ from: "brand", to: "brand", deg: 45 }}
               style={{
-                boxShadow: "0 4px 12px rgba(106, 118, 252, 0.25)",
+                boxShadow: "0 4px 12px var(--cg-shadow-glow)",
                 cursor: "pointer",
               }}
             >
-              <FiZap size={18} style={{ color: "#fff" }} />
+              <AnimatedZap size={18} style={{ color: "#fff" }} />
             </ThemeIcon>
           </motion.div>
           <Box>
@@ -136,11 +136,18 @@ export function Sidebar() {
             <Stack gap={4}>
               {group.items.map((item) => {
                 const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const IconComponent = item.icon;
                 return (
                   <motion.div
                     key={item.href}
-                    whileHover={{ x: 4, scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    initial="rest"
+                    whileHover="hover"
+                    whileTap="tap"
+                    variants={{
+                      rest: { x: 0, scale: 1 },
+                      hover: { x: 4, scale: 1.01 },
+                      tap: { scale: 0.99 }
+                    }}
                     transition={{ type: "spring", stiffness: 350, damping: 22 }}
                   >
                     <NavLink
@@ -148,19 +155,11 @@ export function Sidebar() {
                       href={item.href}
                       label={item.label}
                       leftSection={
-                        active ? (
-                          <motion.div
-                            animate={{ scale: [1, 1.15, 1] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            style={{ color: item.color }}
-                          >
-                            {item.icon}
-                          </motion.div>
-                        ) : (
-                          <div style={{ color: "var(--mantine-color-dimmed)", opacity: 0.85 }}>
-                            {item.icon}
-                          </div>
-                        )
+                        <IconComponent
+                          size={16}
+                          color={active ? item.color : "var(--mantine-color-dimmed)"}
+                          style={{ opacity: active ? 1 : 0.85 }}
+                        />
                       }
                       active={active}
                       variant="light"
@@ -170,9 +169,9 @@ export function Sidebar() {
                           borderRadius: "10px",
                           height: 38,
                           fontWeight: active ? 700 : 550,
-                          backgroundColor: active ? "rgba(106, 118, 252, 0.08)" : "transparent",
+                          backgroundColor: active ? "var(--cg-hover-glow)" : "transparent",
                           color: active ? "var(--mantine-color-brand-filled)" : "inherit",
-                          transition: "all 0.2s ease",
+                          transition: "background-color 0.2s ease",
                         },
                       })}
                     />
@@ -185,7 +184,7 @@ export function Sidebar() {
       </AppShell.Section>
 
       {/* Bottom user profile card */}
-      <AppShell.Section p="md" style={{ borderTop: "1px solid rgba(0, 0, 0, 0.05)" }}>
+      <AppShell.Section p="md" style={{ borderTop: "1px solid var(--cg-border)" }}>
         <Group justify="space-between" align="center" wrap="nowrap">
           <Group gap="xs" wrap="nowrap" style={{ overflow: "hidden" }}>
             <Avatar
@@ -193,7 +192,7 @@ export function Sidebar() {
               color="brand"
               radius="xl"
               style={{
-                boxShadow: "0 2px 8px rgba(106, 118, 252, 0.15)",
+                boxShadow: "0 2px 8px var(--cg-shadow-glow)",
               }}
             >
               {initial}
@@ -214,8 +213,11 @@ export function Sidebar() {
               size="md"
               radius="md"
               onClick={handleLogout}
+              component={motion.button}
+              whileHover={{ scale: 1.15, rotate: -10 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <FiLogOut size={15} />
+              <AnimatedLogOut size={15} />
             </ActionIcon>
           </Tooltip>
         </Group>

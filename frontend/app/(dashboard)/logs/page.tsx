@@ -23,23 +23,23 @@ import {
 } from "@mantine/core";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FiActivity,
-  FiSearch,
-  FiDownload,
-  FiPause,
-  FiPlay,
-  FiTerminal,
-  FiZap,
-  FiChevronDown,
-  FiTrash2,
-  FiCopy,
-  FiCheck,
-  FiEye,
-  FiInfo,
-  FiAlertTriangle,
-  FiXCircle,
-  FiCornerDownRight,
-} from "react-icons/fi";
+  AnimatedActivity,
+  AnimatedSearch,
+  AnimatedDownload,
+  AnimatedPause,
+  AnimatedPlay,
+  AnimatedTerminal,
+  AnimatedZap,
+  AnimatedChevronDown,
+  AnimatedTrash,
+  AnimatedCopy,
+  AnimatedCheck,
+  AnimatedEye,
+  AnimatedInfo,
+  AnimatedAlertTriangle,
+  AnimatedXCircle,
+  AnimatedCornerDownRight,
+} from "../../../components/cg/AnimatedIcons";
 import { PageHeader, FadeIn, AnimatedNumber, MotionSection, MotionItem } from "../../../components/anim";
 import { api, getAccessToken, getApiBase, getRefreshToken, setTokens } from "../../../lib";
 import { CgDrawer } from "../../../components/cg";
@@ -339,7 +339,7 @@ export default function LogsPage() {
   return (
     <Stack gap="md" h="100%" style={{ minHeight: "calc(100vh - 120px)" }}>
       <PageHeader
-        icon={<FiTerminal size={22} />}
+        icon={<AnimatedTerminal size={22} />}
         iconColor="#0891b2"
         title="System Logs"
         description="Real-time observability stream — internal system events & routing logs"
@@ -366,8 +366,8 @@ export default function LogsPage() {
             </FadeIn>
             <FadeIn delay={0.1}>
               <Tooltip label="Export active buffer">
-                <ActionIcon variant="light" color="cyan" size="lg" onClick={handleExport}>
-                  <FiDownload size={18} />
+                <ActionIcon variant="light" color="cyan" size="lg" onClick={handleExport} component={motion.button} whileHover="hover">
+                  <AnimatedDownload size={18} />
                 </ActionIcon>
               </Tooltip>
             </FadeIn>
@@ -406,7 +406,7 @@ export default function LogsPage() {
                 </Text>
               </Stack>
               <ThemeIcon variant="light" color="brand" radius="md" size="lg">
-                <FiTerminal size={18} />
+                <AnimatedTerminal size={18} />
               </ThemeIcon>
             </Group>
           </Box>
@@ -439,7 +439,7 @@ export default function LogsPage() {
                 </Text>
               </Stack>
               <ThemeIcon variant="light" color="blue" radius="md" size="lg">
-                <FiInfo size={18} />
+                <AnimatedInfo size={18} />
               </ThemeIcon>
             </Group>
           </Box>
@@ -472,7 +472,7 @@ export default function LogsPage() {
                 </Text>
               </Stack>
               <ThemeIcon variant="light" color="yellow" radius="md" size="lg">
-                <FiAlertTriangle size={18} />
+                <AnimatedAlertTriangle size={18} />
               </ThemeIcon>
             </Group>
           </Box>
@@ -505,7 +505,7 @@ export default function LogsPage() {
                 </Text>
               </Stack>
               <ThemeIcon variant="light" color="red" radius="md" size="lg">
-                <FiXCircle size={18} />
+                <AnimatedXCircle size={18} />
               </ThemeIcon>
             </Group>
           </Box>
@@ -521,7 +521,7 @@ export default function LogsPage() {
               placeholder={semanticMode ? "Semantic vector search..." : "Filter logs message..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              leftSection={<FiSearch size={14} />}
+              leftSection={<AnimatedSearch size={14} />}
               style={{ flexGrow: 1, maxWidth: 360 }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && mode === "history") runQuery();
@@ -540,7 +540,7 @@ export default function LogsPage() {
                 variant="light"
                 color="grape"
               >
-                <FiZap size={12} style={{ display: "inline-block", marginRight: 4, verticalAlign: "middle" }} />
+                <AnimatedZap size={12} style={{ display: "inline-block", marginRight: 4, verticalAlign: "middle" }} />
                 Semantic
               </Chip>
             </Tooltip>
@@ -603,7 +603,7 @@ export default function LogsPage() {
                   size="xs"
                   variant={live ? "filled" : "light"}
                   color={live ? "green" : "gray"}
-                  leftSection={live ? <FiPause size={12} /> : <FiPlay size={12} />}
+                  leftSection={live ? <AnimatedPause size={12} /> : <AnimatedPlay size={12} />}
                   onClick={() => {
                     setLive(!live);
                     if (!live) {
@@ -619,8 +619,8 @@ export default function LogsPage() {
 
             {/* Clear button */}
             <Tooltip label="Clear terminal view buffer">
-              <ActionIcon variant="light" color="gray" size="md" onClick={handleClear} style={{ height: 26, width: 26 }}>
-                <FiTrash2 size={13} />
+              <ActionIcon variant="light" color="gray" size="md" onClick={handleClear} style={{ height: 26, width: 26 }} component={motion.button} whileHover="hover">
+                <AnimatedTrash size={13} />
               </ActionIcon>
             </Tooltip>
           </Group>
@@ -711,7 +711,7 @@ export default function LogsPage() {
                   >
                     <Box py="xl" my="xl" ta="center">
                       <ThemeIcon size={44} radius="xl" variant="light" color="gray" mx="auto" mb="sm">
-                        <FiTerminal size={22} />
+                        <AnimatedTerminal size={22} />
                       </ThemeIcon>
                       <Text c="dimmed" size="sm" style={{ fontFamily: "var(--mantine-font-family-monospace)" }}>
                         {mode === "live" ? "Waiting for log pipeline events..." : "No matching historical logs found."}
@@ -752,7 +752,7 @@ export default function LogsPage() {
             size="xs"
             variant="subtle"
             color="dimmed"
-            leftSection={<FiChevronDown size={12} />}
+            leftSection={<AnimatedChevronDown size={12} />}
             onClick={() => {
               autoScrollRef.current = true;
               if (scrollRef.current) {
@@ -774,7 +774,7 @@ export default function LogsPage() {
         opened={!!selectedLog}
         onClose={() => setSelectedLog(null)}
         title="Log Entry Inspector"
-        icon={<FiTerminal size={18} />}
+        icon={<AnimatedTerminal size={18} />}
         size="lg"
       >
         {selectedLog && (
@@ -818,7 +818,7 @@ export default function LogsPage() {
                       size="xs"
                       variant="subtle"
                       color={copied ? "green" : "gray"}
-                      leftSection={copied ? <FiCheck size={12} /> : <FiCopy size={12} />}
+                      leftSection={copied ? <AnimatedCheck size={12} /> : <AnimatedCopy size={12} />}
                       onClick={copy}
                       styles={{ root: { height: 24, padding: "0 8px" }, label: { fontSize: 10 } }}
                     >
@@ -858,7 +858,7 @@ export default function LogsPage() {
                         size="xs"
                         variant="subtle"
                         color={copied ? "green" : "gray"}
-                        leftSection={copied ? <FiCheck size={12} /> : <FiCopy size={12} />}
+                        leftSection={copied ? <AnimatedCheck size={12} /> : <AnimatedCopy size={12} />}
                         onClick={copy}
                         styles={{ root: { height: 24, padding: "0 8px" }, label: { fontSize: 10 } }}
                       >
@@ -879,7 +879,7 @@ export default function LogsPage() {
                     placeholder="Search metadata keys/values..."
                     value={metaSearch}
                     onChange={(e) => setMetaSearch(e.target.value)}
-                    leftSection={<FiSearch size={12} />}
+                    leftSection={<AnimatedSearch size={12} />}
                   />
 
                   {filteredContextEntries.length === 0 ? (
@@ -908,7 +908,7 @@ export default function LogsPage() {
                                   color={copied ? "green" : "gray"}
                                   onClick={copy}
                                 >
-                                  {copied ? <FiCheck size={10} /> : <FiCopy size={10} />}
+                                  {copied ? <AnimatedCheck size={10} /> : <AnimatedCopy size={10} />}
                                 </ActionIcon>
                               )}
                             </CopyButton>
@@ -1035,7 +1035,7 @@ function LogRow({ log, onClick }: { log: SystemLog; onClick: () => void }) {
         {hasContext && (
           <Tooltip label="Has JSON Metadata">
             <Group gap={2} style={{ flexShrink: 0, color: "var(--mantine-color-grape-6)" }}>
-              <FiCornerDownRight size={10} style={{ display: "inline" }} />
+              <AnimatedCornerDownRight size={10} style={{ display: "inline" }} />
               <span style={{ fontSize: "9px", fontWeight: 700, fontFamily: "inherit" }}>JSON</span>
             </Group>
           </Tooltip>

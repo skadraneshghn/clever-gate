@@ -4,6 +4,7 @@ import { AppShell } from "@mantine/core";
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Sidebar, Topbar, PageTransition } from "../../components/layout";
+import { PlexusBackground } from "../../components/PlexusBackground";
 import { useAuth } from "../../lib/auth";
 
 const titleMap: Record<string, string> = {
@@ -42,6 +43,7 @@ export default function DashboardLayout({
 
   return (
     <div className="cg-window-shell">
+      <PlexusBackground />
       <AppShell
         header={{ height: 56 }}
         navbar={{ width: 260, breakpoint: "sm" }}

@@ -13,14 +13,14 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
-  FiSun,
-  FiMoon,
-  FiSearch,
-  FiBell,
-  FiPlus,
-  FiBookmark,
-  FiZap,
-} from "react-icons/fi";
+  AnimatedSun,
+  AnimatedMoon,
+  AnimatedSearch,
+  AnimatedBell,
+  AnimatedPlus,
+  AnimatedBookmark,
+  AnimatedZap,
+} from "../cg/AnimatedIcons";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useColorScheme } from "../../theme/ThemeRegistry";
@@ -63,7 +63,7 @@ export function Topbar({ title }: TopbarProps) {
             <Text size="xs" c="dimmed" fw={500}>
               /
             </Text>
-            <Text size="xs" fw={700} style={{ color: "var(--mantine-color-brand-filled)" }}>
+            <Text size="xs" fw={700} style={{ color: "var(--cg-primary)" }}>
               {trail.page}
             </Text>
           </Group>
@@ -76,7 +76,7 @@ export function Topbar({ title }: TopbarProps) {
           py={5}
           style={{
             borderRadius: "8px",
-            border: "1px solid rgba(0, 0, 0, 0.05)",
+            border: "1px solid var(--cg-border)",
             backgroundColor: "rgba(0, 0, 0, 0.02)",
             cursor: "pointer",
             display: "flex",
@@ -86,7 +86,7 @@ export function Topbar({ title }: TopbarProps) {
           }}
           visibleFrom="md"
         >
-          <FiSearch size={13} style={{ color: "var(--mantine-color-dimmed)" }} />
+          <AnimatedSearch size={13} style={{ color: "var(--mantine-color-dimmed)" }} />
           <Text size="xs" c="dimmed" style={{ flexGrow: 1, userSelect: "none", fontWeight: 550 }}>
             Search or type a command
           </Text>
@@ -98,27 +98,53 @@ export function Topbar({ title }: TopbarProps) {
 
         {/* Right section: System actions & Quick buttons */}
         <Group gap="xs" wrap="nowrap">
-          {/* Quick Plus icon */}
-          <ActionIcon variant="subtle" size="lg" radius="md" visibleFrom="xs" color="gray">
-            <FiPlus size={17} />
+          {/* Quick Plus icon (Spins on hover) */}
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            radius="md"
+            visibleFrom="xs"
+            color="gray"
+            component={motion.button}
+            whileHover="hover"
+            whileTap={{ scale: 0.9 }}
+          >
+            <AnimatedPlus size={17} />
           </ActionIcon>
 
-          {/* Notifications Bell with unread badge */}
+          {/* Notifications Bell with unread badge (Shakes like a bell on hover) */}
           <Indicator color="red" size={6} offset={6} processing>
-            <ActionIcon variant="subtle" size="lg" radius="md" color="gray">
-              <FiBell size={17} />
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              radius="md"
+              color="gray"
+              component={motion.button}
+              whileHover="hover"
+              whileTap={{ scale: 0.9 }}
+            >
+              <AnimatedBell size={17} />
             </ActionIcon>
           </Indicator>
 
-          {/* Bookmark icon */}
-          <ActionIcon variant="subtle" size="lg" radius="md" visibleFrom="xs" color="gray">
-            <FiBookmark size={17} />
+          {/* Bookmark icon (Floats up on hover) */}
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            radius="md"
+            visibleFrom="xs"
+            color="gray"
+            component={motion.button}
+            whileHover="hover"
+            whileTap={{ scale: 0.9 }}
+          >
+            <AnimatedBookmark size={17} />
           </ActionIcon>
 
-          {/* Color scheme toggle */}
+          {/* Color scheme toggle (Sun/Moon rotates) */}
           <motion.div
-            whileHover={{ rotate: 180, scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover="hover"
+            whileTap={{ scale: 0.9 }}
             transition={{ type: "spring", stiffness: 200, damping: 10 }}
           >
             <ActionIcon
@@ -129,27 +155,30 @@ export function Topbar({ title }: TopbarProps) {
               aria-label="Toggle color scheme"
             >
               {colorScheme === "dark" ? (
-                <FiSun size={17} style={{ color: "#eab308" }} />
+                <AnimatedSun size={17} style={{ color: "#eab308" }} />
               ) : (
-                <FiMoon size={17} style={{ color: "#5360f8" }} />
+                <AnimatedMoon size={17} style={{ color: "#3f72af" }} />
               )}
             </ActionIcon>
           </motion.div>
 
-          {/* Premium Gradient Actions Button */}
+          {/* Premium Gradient Actions Button (Bounces on hover) */}
           <Button
             size="xs"
             radius="md"
             variant="gradient"
-            gradient={{ from: "#ff719a", to: "#ff8b6c", deg: 45 }}
+            gradient={{ from: "#3f72af", to: "#112d4e", deg: 45 }}
             style={{
               fontWeight: 750,
               fontSize: "12px",
               height: "30px",
-              boxShadow: "0 4px 10px rgba(255, 113, 154, 0.2)",
+              boxShadow: "0 4px 10px rgba(63, 114, 175, 0.2)",
             }}
-            leftSection={<FiZap size={12} />}
+            leftSection={<AnimatedZap size={12} />}
             visibleFrom="sm"
+            component={motion.button}
+            whileHover="hover"
+            whileTap={{ scale: 0.96 }}
           >
             Actions
           </Button>

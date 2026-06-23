@@ -19,7 +19,16 @@ import {
   ActionIcon,
 } from "@mantine/core";
 import { motion } from "framer-motion";
-import { FiZap, FiAlertCircle, FiUser, FiLock, FiShield, FiLogIn, FiSun, FiMoon } from "react-icons/fi";
+import {
+  AnimatedZap,
+  AnimatedAlertCircle,
+  AnimatedUser,
+  AnimatedLock,
+  AnimatedShield,
+  AnimatedLogIn,
+  AnimatedSun,
+  AnimatedMoon,
+} from "../../../components/cg/AnimatedIcons";
 import { useAuth } from "../../../lib/auth";
 import { useColorScheme } from "../../../theme/ThemeRegistry";
 
@@ -75,7 +84,10 @@ export default function LoginPage() {
       {/* Floating Theme Toggle */}
       <Box style={{ position: "absolute", top: 20, right: 20, zIndex: 10 }}>
         <motion.div
-          whileHover={{ rotate: 180, scale: 1.1 }}
+          variants={{
+            hover: { rotate: 180, scale: 1.1 }
+          }}
+          whileHover="hover"
           whileTap={{ scale: 0.9 }}
           transition={{ type: "spring", stiffness: 200, damping: 10 }}
         >
@@ -87,9 +99,9 @@ export default function LoginPage() {
             aria-label="Toggle color scheme"
           >
             {colorScheme === "dark" ? (
-              <FiSun size={20} style={{ color: "#eab308" }} />
+              <AnimatedSun size={20} style={{ color: "#eab308" }} />
             ) : (
-              <FiMoon size={20} style={{ color: "#6366f1" }} />
+              <AnimatedMoon size={20} style={{ color: "#6366f1" }} />
             )}
           </ActionIcon>
         </motion.div>
@@ -174,8 +186,11 @@ export default function LoginPage() {
         >
           <Stack align="center" mb="xl">
             <motion.div
-              variants={itemVariants}
-              whileHover={{ scale: 1.05, rotate: 5 }}
+              variants={{
+                ...itemVariants,
+                hover: { scale: 1.05, rotate: 5 }
+              }}
+              whileHover="hover"
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
             >
               <ThemeIcon
@@ -187,7 +202,7 @@ export default function LoginPage() {
                   boxShadow: "0 8px 28px rgba(106, 118, 252, 0.4)",
                 }}
               >
-                <FiZap size={32} style={{ color: "#fff" }} />
+                <AnimatedZap size={32} style={{ color: "#fff" }} />
               </ThemeIcon>
             </motion.div>
             <Stack gap={4} align="center">
@@ -223,7 +238,7 @@ export default function LoginPage() {
                   transition={{ duration: 0.3 }}
                 >
                   <Alert
-                    icon={<FiAlertCircle size={16} />}
+                    icon={<AnimatedAlertCircle size={16} />}
                     color="red"
                     variant="light"
                     mb="md"
@@ -243,7 +258,7 @@ export default function LoginPage() {
                     required
                     autoFocus
                     size="md"
-                    leftSection={<FiUser size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
+                    leftSection={<AnimatedUser size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
                   />
                   <PasswordInput
                     label="Password"
@@ -251,7 +266,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     size="md"
-                    leftSection={<FiLock size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
+                    leftSection={<AnimatedLock size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
                   />
                   <TextInput
                     label="TOTP Code (optional)"
@@ -259,9 +274,15 @@ export default function LoginPage() {
                     onChange={(e) => setTotp(e.target.value)}
                     placeholder="2FA code"
                     size="md"
-                    leftSection={<FiShield size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
+                    leftSection={<AnimatedShield size={18} style={{ color: "var(--mantine-color-brand-filled)" }} />}
                   />
-                  <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
+                  <motion.div
+                    variants={{
+                      hover: { scale: 1.015 }
+                    }}
+                    whileHover="hover"
+                    whileTap={{ scale: 0.985 }}
+                  >
                     <Button
                       type="submit"
                       size="md"
@@ -269,7 +290,7 @@ export default function LoginPage() {
                       loading={loading}
                       variant="gradient"
                       gradient={{ from: "brand", to: "grape", deg: 90 }}
-                      leftSection={<FiLogIn size={18} />}
+                      leftSection={<AnimatedLogIn size={18} />}
                       style={{
                         height: 46,
                         fontWeight: 600,
@@ -284,9 +305,12 @@ export default function LoginPage() {
             </Paper>
           </motion.div>
 
-          <motion.div variants={itemVariants}>
+          <motion.div
+            variants={itemVariants}
+            whileHover="hover"
+          >
             <Group justify="center" mt="xl" gap="xs">
-              <FiShield size={14} style={{ color: "var(--mantine-color-dimmed)" }} />
+              <AnimatedShield size={14} style={{ color: "var(--mantine-color-dimmed)" }} />
               <Text ta="center" size="xs" c="dimmed" fw={500}>
                 Secured with JWT · OpenAI-compatible AI gateway
               </Text>

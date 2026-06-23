@@ -3,7 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Stack, Card, Text, Badge, Group, ThemeIcon } from "@mantine/core";
 import { motion } from "framer-motion";
-import { FiGitMerge, FiCpu, FiZap, FiCheckCircle, FiXCircle } from "react-icons/fi";
+import {
+  AnimatedGitMerge,
+  AnimatedCpu,
+  AnimatedZap,
+  AnimatedCheckCircle,
+  AnimatedXCircle,
+} from "../../../components/cg/AnimatedIcons";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, fadeUp } from "../../../components/anim";
 import { api } from "../../../lib";
@@ -35,7 +41,7 @@ export default function ModelsPage() {
   return (
     <Stack gap="md">
       <PageHeader
-        icon={<FiGitMerge size={22} />}
+        icon={<AnimatedGitMerge size={22} />}
         iconColor="#ea580c"
         title="Models & Routing"
         description="Model aliases group multiple deployments under a single user-facing name"
@@ -48,23 +54,23 @@ export default function ModelsPage() {
           <Stack gap="md">
             {Array.from(aliases.entries()).map(([alias, deps]) => (
               <MotionItem key={alias} variants={fadeUp}>
-                <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 350, damping: 25 }}>
+                <motion.div whileHover="hover" transition={{ type: "spring", stiffness: 350, damping: 25 }}>
                   <Card p="lg" radius="md" withBorder shadow="sm">
                     <Group justify="space-between" mb="sm">
                       <Group gap="sm">
                         <ThemeIcon size={36} radius="md" variant="light" color="orange">
-                          <FiCpu size={18} />
+                          <AnimatedCpu size={18} />
                         </ThemeIcon>
                         <Text fw={700} size="lg">{alias}</Text>
                       </Group>
-                      <Badge variant="light" size="sm" color="orange" leftSection={<FiZap size={12} />}>{deps.length} deployment(s)</Badge>
+                      <Badge variant="light" size="sm" color="orange" leftSection={<AnimatedZap size={12} />}>{deps.length} deployment(s)</Badge>
                     </Group>
                     <Stack gap="xs">
                       {deps.map((d) => (
                         <Group key={d.id} justify="space-between">
                           <Text size="sm" ff="monospace">{d.litellm_model}</Text>
                           <Group gap="xs">
-                            <Badge variant="light" color={d.is_enabled ? "green" : "gray"} size="xs" leftSection={d.is_enabled ? <FiCheckCircle size={10} /> : <FiXCircle size={10} />}>
+                            <Badge variant="light" color={d.is_enabled ? "green" : "gray"} size="xs" leftSection={d.is_enabled ? <AnimatedCheckCircle size={10} /> : <AnimatedXCircle size={10} />}>
                               {d.is_enabled ? "enabled" : "disabled"}
                             </Badge>
                             {d.tpm && <Badge variant="outline" size="xs">{d.tpm} TPM</Badge>}

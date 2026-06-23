@@ -14,17 +14,11 @@ import {
   Avatar,
   Box,
   ActionIcon,
-  Tooltip,
 } from "@mantine/core";
 import {
-  FiActivity,
-  FiCpu,
-  FiDollarSign,
-  FiZap,
-  FiCheckCircle,
-  FiRefreshCw,
-  FiSliders,
-} from "react-icons/fi";
+  AnimatedRefreshCw,
+  AnimatedSliders,
+} from "../../components/cg/AnimatedIcons";
 import { motion } from "framer-motion";
 import {
   ResponsiveContainer,
@@ -136,8 +130,8 @@ export default function DashboardPage() {
   const healthPercent = Math.round((healthyCount / totalCount) * 100);
 
   const pieData = [
-    { name: "Healthy", value: healthyCount, color: "#5360f8" },
-    { name: "Down", value: totalCount - healthyCount, color: "#ff719a" },
+    { name: "Healthy", value: healthyCount, color: "#3f72af" }, // Medium Blue
+    { name: "Down", value: totalCount - healthyCount, color: "#dbe2ef" }, // Ice Gray-Blue
   ];
 
   // Model cost distribution mock data for bottom right chart
@@ -165,7 +159,7 @@ export default function DashboardPage() {
               trendBadge="↑ 19%"
               trendType="up"
               sparklineData={[12, 19, 15, 22, 18, 24, 22]}
-              sparklineColor="#5360f8"
+              sparklineColor="#3f72af"
             />
           </motion.div>
           <motion.div variants={itemVariants}>
@@ -173,11 +167,11 @@ export default function DashboardPage() {
               title="Tokens"
               value={metrics?.total_tokens ?? 0}
               subtitle="total"
-              color="grape"
+              color="brand"
               trendBadge="↑ 16%"
               trendType="up"
               sparklineData={[30, 45, 38, 55, 48, 62, 50]}
-              sparklineColor="#be4bdb"
+              sparklineColor="#72a2cf"
             />
           </motion.div>
           <motion.div variants={itemVariants}>
@@ -185,11 +179,11 @@ export default function DashboardPage() {
               title="Cost"
               value={`$${(metrics?.total_cost_usd ?? 0).toFixed(2)}`}
               subtitle="total spend"
-              color="orange"
+              color="brand"
               trendBadge="↑ 12%"
               trendType="up"
               sparklineData={[10, 15, 12, 18, 14, 20, 19]}
-              sparklineColor="#fd7e14"
+              sparklineColor="#3f72af"
               sparklineType="bar"
             />
           </motion.div>
@@ -198,11 +192,11 @@ export default function DashboardPage() {
               title="Cache Hit"
               value={`${((metrics?.cache_hit_rate ?? 0) * 100).toFixed(1)}%`}
               subtitle={`${metrics?.active_keys ?? 0} active keys`}
-              color="green"
+              color="brand"
               trendBadge="↓ 5%"
               trendType="down"
               sparklineData={[85, 82, 88, 84, 87, 85, 83]}
-              sparklineColor="#40c057"
+              sparklineColor="#dbe2ef"
               sparklineType="bar"
             />
           </motion.div>
@@ -224,11 +218,11 @@ export default function DashboardPage() {
                   Traffic Overview (live)
                 </Text>
                 <Group gap="xs">
-                  <ActionIcon variant="subtle" size="sm" color="gray">
-                    <FiRefreshCw size={13} />
+                  <ActionIcon variant="subtle" size="sm" color="gray" component={motion.button} whileHover="hover">
+                    <AnimatedRefreshCw size={13} />
                   </ActionIcon>
-                  <ActionIcon variant="subtle" size="sm" color="gray">
-                    <FiSliders size={13} />
+                  <ActionIcon variant="subtle" size="sm" color="gray" component={motion.button} whileHover="hover">
+                    <AnimatedSliders size={13} />
                   </ActionIcon>
                   <Badge variant="dot" size="xs" color="brand" style={{ fontWeight: 700 }}>
                     STREAMING
@@ -240,12 +234,12 @@ export default function DashboardPage() {
                 <AreaChart data={history}>
                   <defs>
                     <linearGradient id="rpsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6a76fc" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#6a76fc" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3f72af" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#3f72af" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="latGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ff719a" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#ff719a" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6b8ebb" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#6b8ebb" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.04)" />
@@ -257,13 +251,13 @@ export default function DashboardPage() {
                       backdropFilter: "blur(12px)",
                       border: "1px solid rgba(0, 0, 0, 0.05)",
                       borderRadius: 10,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+                      boxShadow: "0 8px 24px rgba(17,45,78,0.06)",
                     }}
                   />
                   <Area
                     type="monotone"
                     dataKey="rps"
-                    stroke="#5360f8"
+                    stroke="#3f72af"
                     fill="url(#rpsGrad)"
                     name="Requests / s"
                     strokeWidth={2}
@@ -271,7 +265,7 @@ export default function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="latency"
-                    stroke="#ff719a"
+                    stroke="#6b8ebb"
                     fill="url(#latGrad)"
                     name="Latency (ms)"
                     strokeWidth={2}
@@ -329,11 +323,11 @@ export default function DashboardPage() {
               {/* Legends */}
               <Group justify="space-around" mt="sm">
                 <Group gap={6}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#5360f8" }} />
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#3f72af" }} />
                   <Text size="xs" fw={600}>Healthy Uptime</Text>
                 </Group>
                 <Group gap={6}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#ff719a" }} />
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#dbe2ef" }} />
                   <Text size="xs" fw={600}>Cooldown Rest</Text>
                 </Group>
               </Group>
@@ -361,7 +355,7 @@ export default function DashboardPage() {
                     Active gateway API tokens
                   </Text>
                 </Box>
-                <Badge size="xs" variant="light" color="blue" style={{ fontWeight: 700 }}>
+                <Badge size="xs" variant="light" color="brand" style={{ fontWeight: 700 }}>
                   LIVE MONITORS
                 </Badge>
               </Group>
@@ -380,10 +374,10 @@ export default function DashboardPage() {
                         </Box>
                       </Group>
                       <Group gap="xs">
-                        <Badge size="xs" variant="light" color={item.active ? "green" : "gray"}>
+                        <Badge size="xs" variant="light" color={item.active ? "brand" : "gray"}>
                           {item.rate}
                         </Badge>
-                        <Text size="10px" fw={600} c={item.active ? "green" : "dimmed"}>
+                        <Text size="10px" fw={600} c={item.active ? "brand" : "dimmed"}>
                           {item.active ? "online" : "idle"}
                         </Text>
                       </Group>
@@ -429,8 +423,8 @@ export default function DashboardPage() {
                       borderRadius: 8,
                     }}
                   />
-                  <Bar dataKey="requests" fill="#5360f8" radius={[4, 4, 0, 0]} barSize={16} name="Requests" />
-                  <Bar dataKey="tokens" fill="#ff719a" radius={[4, 4, 0, 0]} barSize={16} name="Tokens (k)" />
+                  <Bar dataKey="requests" fill="#3f72af" radius={[4, 4, 0, 0]} barSize={16} name="Requests" />
+                  <Bar dataKey="tokens" fill="#a2c4df" radius={[4, 4, 0, 0]} barSize={16} name="Tokens (k)" />
                 </BarChart>
               </ResponsiveContainer>
             </Card>

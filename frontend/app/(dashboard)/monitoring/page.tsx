@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Stack, Group, TextInput, Badge } from "@mantine/core";
-import { FiActivity, FiSearch } from "react-icons/fi";
+import { AnimatedActivity, AnimatedSearch } from "../../../components/cg/AnimatedIcons";
 import { CgTable, type CgColumn } from "../../../components/cg";
 import { LoadingState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, FadeIn } from "../../../components/anim";
@@ -58,7 +58,7 @@ export default function MonitoringPage() {
   return (
     <Stack gap="lg">
       <PageHeader
-        icon={<FiActivity size={22} />}
+        icon={<AnimatedActivity size={22} />}
         iconColor="#0891b2"
         title="Monitoring / Audit"
         description="Real-time request logs and audit trail"
@@ -72,7 +72,7 @@ export default function MonitoringPage() {
             value={modelFilter}
             onChange={(e) => { setModelFilter(e.target.value); setPage(1); }}
             w={250}
-            leftSection={<FiSearch size={16} style={{ color: "var(--mantine-color-dimmed)" }} />}
+            leftSection={<AnimatedSearch size={16} style={{ color: "var(--mantine-color-dimmed)" }} />}
           />
         </Group>
       </FadeIn>
