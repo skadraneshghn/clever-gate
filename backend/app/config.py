@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,6 +49,20 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_HOST: str | None = None
+    REDIS_PORT: int | None = None
+    REDIS_PASSWORD: str | None = None
+
+    @model_validator(mode="after")
+    def construct_redis_url(self) -> Settings:
+        if self.REDIS_HOST:
+            port = self.REDIS_PORT or 6379
+            password = self.REDIS_PASSWORD or ""
+            if password:
+                self.REDIS_URL = f"redis://:{password}@{self.REDIS_HOST}:{port}/0"
+            else:
+                self.REDIS_URL = f"redis://{self.REDIS_HOST}:{port}/0"
+        return self
 
     # LiteLLM router defaults
     CG_ROUTING_STRATEGY: str = "simple-shuffle"
