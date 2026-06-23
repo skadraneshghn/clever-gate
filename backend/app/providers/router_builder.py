@@ -128,6 +128,15 @@ class RouterBuilder:
                             provider_key_id=str(key.id),
                         )
 
+                # Also pull params from provider.config (e.g. {"api_key": "..."})
+                # — this is set via the "Config (JSON)" field in the admin UI.
+                # ProviderKey-based keys take precedence (setdefault), so this
+                # acts as a convenient fallback for providers that don't use the
+                # dedicated key store.
+                provider_config: dict[str, Any] = dict(provider.config or {})
+                for config_key, config_val in provider_config.items():
+                    litellm_params.setdefault(config_key, config_val)
+
                 if provider.base_url:
                     litellm_params.setdefault("api_base", provider.base_url)
 

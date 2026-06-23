@@ -61,6 +61,34 @@ export interface ProviderKey {
   created_at: string;
 }
 
+export interface DeploymentInfo {
+  deployment_id: string;
+  model_name: string;
+  litellm_model: string;
+  // LiteLLM model metadata
+  max_input_tokens: number | null;
+  max_output_tokens: number | null;
+  input_cost_per_token: number | null;
+  output_cost_per_token: number | null;
+  supports_streaming: boolean | null;
+  supports_function_calling: boolean | null;
+  supports_vision: boolean | null;
+  // DB-tracked usage
+  requests: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  cost_usd: number;
+}
+
+export interface ProviderInfo {
+  provider_id: string;
+  provider_name: string;
+  total_requests: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  deployments: DeploymentInfo[];
+}
+
 export interface ApiKey {
   id: string;
   key_prefix: string;

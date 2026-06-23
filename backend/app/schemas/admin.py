@@ -113,6 +113,41 @@ class ProviderResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Provider info (model metadata + usage stats)
+# --------------------------------------------------------------------------- #
+class DeploymentInfo(BaseModel):
+    """LiteLLM model metadata merged with DB-tracked usage for one deployment."""
+
+    deployment_id: str
+    model_name: str
+    litellm_model: str
+    # LiteLLM model metadata (None when model is not in the cost map)
+    max_input_tokens: int | None = None
+    max_output_tokens: int | None = None
+    input_cost_per_token: float | None = None
+    output_cost_per_token: float | None = None
+    supports_streaming: bool | None = None
+    supports_function_calling: bool | None = None
+    supports_vision: bool | None = None
+    # DB-tracked usage
+    requests: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd: float = 0.0
+
+
+class ProviderInfo(BaseModel):
+    """Aggregate provider info: LiteLLM metadata + cumulative usage stats."""
+
+    provider_id: str
+    provider_name: str
+    total_requests: int = 0
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+    deployments: list[DeploymentInfo] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- #
 # Deployments
 # --------------------------------------------------------------------------- #
 class DeploymentCreate(BaseModel):

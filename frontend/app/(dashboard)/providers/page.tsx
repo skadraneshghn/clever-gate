@@ -16,6 +16,13 @@ import {
   Text,
   Card,
   PasswordInput,
+  SimpleGrid,
+  ThemeIcon,
+  Divider,
+  Box,
+  Table,
+  Skeleton,
+  Tooltip,
 } from "@mantine/core";
 import { motion } from "framer-motion";
 import {
@@ -29,6 +36,11 @@ import {
   AnimatedKey,
   AnimatedCheckCircle,
   AnimatedXCircle,
+  AnimatedInfo,
+  AnimatedActivity,
+  AnimatedDollarSign,
+  AnimatedCoins,
+  AnimatedCpu,
 } from "../../../components/cg/AnimatedIcons";
 import {
   CgTable,
@@ -40,10 +52,43 @@ import {
 import { LoadingState, ErrorState } from "../../../components/States";
 import { PageHeader, MotionSection, MotionItem, FadeIn } from "../../../components/anim";
 import { api } from "../../../lib";
-import type { Paginated, Provider, Deployment, ProviderKey } from "../../../lib/types";
+import type { Paginated, Provider, Deployment, ProviderKey, ProviderInfo } from "../../../lib/types";
 
 type Tab = "providers" | "deployments" | "keys";
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function fmtCost(n: number): string {
+  if (n === 0) return "$0.00";
+  if (n < 0.01) return `$${n.toFixed(6)}`;
+  return `$${n.toFixed(4)}`;
+}
+
+function costPer1M(perToken: number | null): string {
+  if (perToken === null) return "—";
+  return `$${(perToken * 1_000_000).toFixed(3)}`;
+}
+
+function SupportBadge({ val, label }: { val: boolean | null; label: string }) {
+  if (val === null) return <Badge size="xs" variant="outline" color="gray">—</Badge>;
+  return (
+    <Badge
+      size="xs"
+      variant="light"
+      color={val ? "teal" : "gray"}
+      leftSection={val ? <AnimatedCheckCircle size={9} /> : <AnimatedXCircle size={9} />}
+    >
+      {label}
+    </Badge>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 export default function ProvidersPage() {
   const { toast } = useToast();
   const confirm = useCgConfirm();
@@ -55,6 +100,7 @@ export default function ProvidersPage() {
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Provider | Deployment | null>(null);
+  const [infoTarget, setInfoTarget] = useState<Provider | null>(null);
 
   const loadProviders = useCallback(async () => {
     try {
@@ -146,6 +192,11 @@ export default function ProvidersPage() {
       label: "",
       render: (p) => (
         <Group gap="xs">
+          <Tooltip label="Model info & usage" withArrow>
+            <ActionIcon variant="subtle" color="blue" onClick={() => setInfoTarget(p)} component={motion.button} whileHover="hover">
+              <AnimatedInfo size={16} />
+            </ActionIcon>
+          </Tooltip>
           <ActionIcon variant="subtle" onClick={() => { setEditing(p); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
             <AnimatedEdit size={16} />
           </ActionIcon>
@@ -292,10 +343,224 @@ export default function ProvidersPage() {
         providers={providers}
         onSaved={async () => { setDrawerOpen(false); await loadKeys(); }}
       />
+
+      {/* Provider info drawer */}
+      <ProviderInfoDrawer
+        provider={infoTarget}
+        onClose={() => setInfoTarget(null)}
+      />
     </Stack>
   );
 }
 
+// ─── Provider Info Drawer ─────────────────────────────────────────────────────
+function ProviderInfoDrawer({ provider, onClose }: { provider: Provider | null; onClose: () => void }) {
+  const [info, setInfo] = useState<ProviderInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!provider) { setInfo(null); return; }
+    setLoading(true);
+    setError("");
+    api.get<ProviderInfo>(`/api/admin/providers/${provider.id}/info`)
+      .then(setInfo)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load info"))
+      .finally(() => setLoading(false));
+  }, [provider]);
+
+  const statCards = [
+    {
+      label: "Total Requests",
+      value: info ? fmtNum(info.total_requests) : "—",
+      icon: <AnimatedActivity size={16} />,
+      color: "#3f72af",
+      glow: "rgba(63,114,175,0.15)",
+    },
+    {
+      label: "Total Tokens",
+      value: info ? fmtNum(info.total_tokens) : "—",
+      icon: <AnimatedCoins size={16} />,
+      color: "#0d9488",
+      glow: "rgba(13,148,136,0.15)",
+    },
+    {
+      label: "Total Cost",
+      value: info ? fmtCost(info.total_cost_usd) : "—",
+      icon: <AnimatedDollarSign size={16} />,
+      color: "#d97706",
+      glow: "rgba(217,119,6,0.15)",
+    },
+  ];
+
+  return (
+    <CgDrawer
+      opened={!!provider}
+      onClose={onClose}
+      title={provider ? `${provider.name} — Info` : "Provider Info"}
+      icon={<AnimatedInfo size={16} />}
+      iconColor="blue"
+      size="xl"
+    >
+      {/* Error */}
+      {error && (
+        <Card p="sm" radius="md" withBorder style={{ borderColor: "var(--mantine-color-red-3)" }}>
+          <Text size="sm" c="red">{error}</Text>
+        </Card>
+      )}
+
+      {/* Summary Stat Cards */}
+      <SimpleGrid cols={3} spacing="sm">
+        {statCards.map((s) => (
+          <motion.div
+            key={s.label}
+            whileHover={{ y: -3, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 350, damping: 22 }}
+          >
+            <Card
+              p="sm"
+              radius="lg"
+              withBorder
+              style={{ position: "relative", overflow: "hidden" }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: -16,
+                  right: -16,
+                  width: 60,
+                  height: 60,
+                  borderRadius: "50%",
+                  background: s.glow,
+                  filter: "blur(16px)",
+                  pointerEvents: "none",
+                }}
+              />
+              <Stack gap={4}>
+                <Group gap={6}>
+                  <ThemeIcon size={22} radius="md" variant="light" style={{ color: s.color, background: s.glow }}>
+                    {s.icon}
+                  </ThemeIcon>
+                  <Text size="10px" c="dimmed" fw={800} tt="uppercase" style={{ letterSpacing: 0.5 }}>
+                    {s.label}
+                  </Text>
+                </Group>
+                {loading ? (
+                  <Skeleton height={20} radius="sm" />
+                ) : (
+                  <Text size="lg" fw={900} style={{ color: s.color, letterSpacing: -0.5 }}>
+                    {s.value}
+                  </Text>
+                )}
+              </Stack>
+            </Card>
+          </motion.div>
+        ))}
+      </SimpleGrid>
+
+      <Divider label="Deployments" labelPosition="left" mt="xs" />
+
+      {/* Deployments Table */}
+      {loading ? (
+        <Stack gap="xs">
+          {[...Array(2)].map((_, i) => <Skeleton key={i} height={56} radius="md" />)}
+        </Stack>
+      ) : info && info.deployments.length > 0 ? (
+        <Box style={{ overflowX: "auto" }}>
+          <Table highlightOnHover verticalSpacing="xs" fz="xs">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Model</Table.Th>
+                <Table.Th>Context</Table.Th>
+                <Table.Th>Input / 1M</Table.Th>
+                <Table.Th>Output / 1M</Table.Th>
+                <Table.Th>Capabilities</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>Requests</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>Tokens</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>Cost</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {info.deployments.map((dep) => (
+                <Table.Tr key={dep.deployment_id}>
+                  <Table.Td>
+                    <Stack gap={1}>
+                      <Text fw={700} size="xs">{dep.model_name}</Text>
+                      <Text size="10px" c="dimmed" ff="monospace">{dep.litellm_model}</Text>
+                    </Stack>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" fw={600}>
+                      {dep.max_input_tokens ? fmtNum(dep.max_input_tokens) : "—"}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" fw={600} style={{ color: "#3f72af" }}>
+                      {costPer1M(dep.input_cost_per_token)}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" fw={600} style={{ color: "#d97706" }}>
+                      {costPer1M(dep.output_cost_per_token)}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4} wrap="wrap">
+                      <SupportBadge val={dep.supports_streaming} label="Stream" />
+                      <SupportBadge val={dep.supports_function_calling} label="Fn Call" />
+                      <SupportBadge val={dep.supports_vision} label="Vision" />
+                    </Group>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "right" }}>
+                    <Text size="xs" fw={600}>{fmtNum(dep.requests)}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "right" }}>
+                    <Stack gap={0} align="flex-end">
+                      <Text size="xs" fw={600}>{fmtNum(dep.prompt_tokens + dep.completion_tokens)}</Text>
+                      <Text size="9px" c="dimmed">
+                        {fmtNum(dep.prompt_tokens)}↑ {fmtNum(dep.completion_tokens)}↓
+                      </Text>
+                    </Stack>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "right" }}>
+                    <Text size="xs" fw={700} style={{ color: "#0d9488" }}>{fmtCost(dep.cost_usd)}</Text>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Box>
+      ) : !loading && (
+        <Card p="md" radius="md" withBorder>
+          <Group gap="sm">
+            <ThemeIcon size={28} radius="md" variant="light" color="gray">
+              <AnimatedCpu size={14} />
+            </ThemeIcon>
+            <Stack gap={2}>
+              <Text size="sm" fw={600}>No deployments configured</Text>
+              <Text size="xs" c="dimmed">Add a deployment under the Deployments tab to see model details here.</Text>
+            </Stack>
+          </Group>
+        </Card>
+      )}
+
+      {/* LiteLLM metadata note */}
+      {info && info.deployments.some(d => d.max_input_tokens !== null) && (
+        <Card p="xs" radius="md" withBorder style={{ borderStyle: "dashed" }}>
+          <Group gap={6}>
+            <AnimatedInfo size={12} style={{ color: "var(--mantine-color-dimmed)", flexShrink: 0 }} />
+            <Text size="10px" c="dimmed">
+              Context window and pricing data sourced from LiteLLM's built-in model cost map.
+              Usage counts (requests, tokens, cost) reflect traffic routed through this gateway.
+            </Text>
+          </Group>
+        </Card>
+      )}
+    </CgDrawer>
+  );
+}
+
+// ─── Provider CRUD Drawer ─────────────────────────────────────────────────────
 function ProviderDrawer({
   opened, onClose, editing, onSaved,
 }: { opened: boolean; onClose: () => void; editing: Provider | null; onSaved: () => void }) {
@@ -340,13 +605,15 @@ function ProviderDrawer({
         <Select label="Adapter Type" value={adapterType} onChange={(v) => setAdapterType(v || "litellm")} data={[{ value: "litellm", label: "litellm" }]} />
       )}
       <TextInput label="Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.openai.com/v1" />
-      <Textarea label="Config (JSON)" value={config} onChange={(e) => setConfig(e.target.value)} rows={5} ff="monospace" />
+      <Textarea label="Config (JSON)" value={config} onChange={(e) => setConfig(e.target.value)} rows={5} ff="monospace"
+        description='Tip: add {"api_key": "your-key"} here to authenticate with the provider.' />
       <Switch label="Enabled" checked={enabled} onChange={(e) => setEnabled(e.currentTarget.checked)} />
       <Button onClick={handleSave} loading={saving} fullWidth variant="gradient" gradient={{ from: "brand", to: "teal", deg: 90 }}>Save</Button>
     </CgDrawer>
   );
 }
 
+// ─── Deployment CRUD Drawer ───────────────────────────────────────────────────
 function DeploymentDrawer({
   opened, onClose, editing, providers, onSaved,
 }: { opened: boolean; onClose: () => void; editing: Deployment | null; providers: Provider[]; onSaved: () => void }) {
@@ -409,6 +676,7 @@ function DeploymentDrawer({
   );
 }
 
+// ─── Provider Key CRUD Drawer ─────────────────────────────────────────────────
 function ProviderKeyDrawer({
   opened, onClose, providers, onSaved,
 }: { opened: boolean; onClose: () => void; providers: Provider[]; onSaved: () => void }) {
