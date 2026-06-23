@@ -171,11 +171,17 @@ async def _transport_loop() -> None:
                 batch.clear()
         except queue.Empty:
             if batch:
-                await _flush_batch(redis, batch)
+                try:
+                    await _flush_batch(redis, batch)
+                except Exception as exc:
+                    # Use print, not logger, to avoid feedback loop
+                    print(f"[log_transport] flush error: {exc}", flush=True)
                 batch.clear()
             await asyncio.sleep(_FLUSH_INTERVAL)
         except Exception as exc:
-            logger.warning("log_transport.error", error=str(exc))
+            # Use print, not logger, to avoid feedback loop
+            print(f"[log_transport] error: {exc}", flush=True)
+            batch.clear()
             await asyncio.sleep(1)
 
     if batch:

@@ -95,7 +95,8 @@ async def _stream_loop(websocket: WebSocket, level_filter: str | None) -> None:
     await pubsub.subscribe(_PUBSUB_CHANNEL)
 
     batch: list[str] = []
-    last_flush = asyncio.get_event_loop().time()
+    loop = asyncio.get_running_loop()
+    last_flush = loop.time()
 
     try:
         while True:
@@ -121,7 +122,7 @@ async def _stream_loop(websocket: WebSocket, level_filter: str | None) -> None:
                             pass
                     batch.append(raw)
 
-            now = asyncio.get_event_loop().time()
+            now = loop.time()
             if batch and (len(batch) >= 50 or now - last_flush >= _BATCH_WINDOW):
                 payload = json.dumps(batch)
                 await websocket.send_text(payload)

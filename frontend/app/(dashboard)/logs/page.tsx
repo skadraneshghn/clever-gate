@@ -65,53 +65,78 @@ export default function LogsPage() {
   const autoScrollRef = useRef(true);
   const bufferRef = useRef<SystemLog[]>([]);
 
-  // ── Live WebSocket streaming ────────────────────────────────────────── //
+  // ── Live WebSocket streaming with auto-reconnect ────────────────────── //
   useEffect(() => {
     if (mode !== "live") return;
 
-    const token = getAccessToken();
-    if (!token) return;
+    let ws: WebSocket | null = null;
+    let retryCount = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
 
-    const url = wsUrlFromHttp(getApiBase(), "/api/admin/ws/logs", { token });
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    const connect = () => {
+      if (cancelled) return;
+      const token = getAccessToken();
+      if (!token) return;
 
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => {
-      setConnected(false);
-      setTimeout(() => {
-        if (mode === "live" && live) {
-          setConnected(false);
+      const url = wsUrlFromHttp(getApiBase(), "/api/admin/ws/logs", { token });
+      ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+        retryCount = 0;
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        wsRef.current = null;
+        if (!cancelled && mode === "live") {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          retryCount++;
+          reconnectTimer = setTimeout(connect, delay);
         }
-      }, 1000);
-    };
-    ws.onmessage = (ev) => {
-      try {
-        const data = JSON.parse(ev.data);
-        if (data.type === "heartbeat") return;
-        const batch: string[] = Array.isArray(data) ? data : [data];
-        const newLogs: SystemLog[] = batch.map((raw) => {
-          const e = typeof raw === "string" ? JSON.parse(raw) : raw;
-          return {
-            id: crypto.randomUUID(),
-            timestamp: e.timestamp,
-            level: e.level,
-            logger_name: e.logger_name,
-            message: e.message,
-            context: e.context || {},
-          };
-        });
-        bufferRef.current = [...bufferRef.current, ...newLogs].slice(-MAX_LIVE_LOGS);
-        if (live) {
-          setLogs([...bufferRef.current]);
+      };
+
+      ws.onerror = () => {
+        setConnected(false);
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.type === "heartbeat") return;
+          const batch: string[] = Array.isArray(data) ? data : [data];
+          const newLogs: SystemLog[] = batch.map((raw) => {
+            const e = typeof raw === "string" ? JSON.parse(raw) : raw;
+            return {
+              id: crypto.randomUUID(),
+              timestamp: e.timestamp,
+              level: e.level,
+              logger_name: e.logger_name,
+              message: e.message,
+              context: e.context || {},
+            };
+          });
+          bufferRef.current = [...bufferRef.current, ...newLogs].slice(-MAX_LIVE_LOGS);
+          if (live) {
+            setLogs([...bufferRef.current]);
+          }
+        } catch {
+          // ignore parse errors
         }
-      } catch {
-        // ignore parse errors
-      }
+      };
     };
+
+    connect();
 
     return () => {
-      ws.close();
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
       wsRef.current = null;
     };
   }, [mode, live]);

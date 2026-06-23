@@ -1,7 +1,7 @@
 """Background consumer: Redis Stream → embedding → PostgreSQL bulk insert.
 
 Reads log events from the Redis Stream in batches, generates vector
-embeddings via the ProcessPool, and performs bulk inserts into the
+embeddings via the executor, and performs bulk inserts into the
 ``system_logs`` table.
 
 If the pgvector extension is not available, embeddings are silently
@@ -22,9 +22,6 @@ from sqlalchemy import text
 from app.core.pooling import get_redis
 from app.db.session import db_context
 from app.observability.embedding import embed_text
-from app.observability.logging import get_logger
-
-logger = get_logger(__name__)
 
 _STREAM_KEY = "cg:logs:stream"
 _CONSUMER_GROUP = "cg-log-consumer"
@@ -58,7 +55,7 @@ async def _ensure_consumer_group(redis: any) -> None:
         await redis.xgroup_create(_STREAM_KEY, _CONSUMER_GROUP, id="0", mkstream=True)
     except Exception as exc:
         if "BUSYGROUP" not in str(exc):
-            raise
+            print(f"[log_consumer] xgroup_create error: {exc}", flush=True)
 
 
 async def _consumer_loop() -> None:
@@ -66,7 +63,7 @@ async def _consumer_loop() -> None:
     redis = await get_redis()
     await _ensure_consumer_group(redis)
 
-    buffer: list[dict] = []
+    buffer: list[tuple[str, dict]] = []  # (msg_id, event)
 
     while True:
         try:
@@ -80,7 +77,7 @@ async def _consumer_loop() -> None:
 
             if not response:
                 if buffer:
-                    await _flush_buffer(buffer)
+                    await _flush_buffer(redis, buffer)
                     buffer.clear()
                 continue
 
@@ -91,27 +88,31 @@ async def _consumer_loop() -> None:
                         continue
                     try:
                         event = orjson.loads(raw)
-                        buffer.append(event)
+                        buffer.append((msg_id, event))
                     except Exception:
                         pass
 
             if len(buffer) >= _BULK_INSERT_SIZE:
-                await _flush_buffer(buffer)
+                await _flush_buffer(redis, buffer)
                 buffer.clear()
 
         except asyncio.CancelledError:
             if buffer:
-                await _flush_buffer(buffer)
+                await _flush_buffer(redis, buffer)
             raise
         except Exception as exc:
-            logger.warning("log_consumer.error", error=str(exc))
+            # Use print, not logger, to avoid feedback loop
+            print(f"[log_consumer] error: {exc}", flush=True)
             await asyncio.sleep(2)
 
 
-async def _flush_buffer(events: list[dict]) -> None:
-    """Generate embeddings and bulk-insert a batch of log events."""
-    if not events:
+async def _flush_buffer(redis: any, entries: list[tuple[str, dict]]) -> None:
+    """Generate embeddings and bulk-insert a batch of log events, then ACK."""
+    if not entries:
         return
+
+    msg_ids = [eid for eid, _ in entries]
+    events = [evt for _, evt in entries]
 
     async with db_context() as session:
         use_embedding = await _check_embedding_column(session)
@@ -124,7 +125,7 @@ async def _flush_buffer(events: list[dict]) -> None:
                 loop = asyncio.get_running_loop()
                 embeddings = await loop.run_in_executor(None, _embed_batch, texts)
             except Exception as exc:
-                logger.warning("log_consumer.embedding_failed", error=str(exc))
+                print(f"[log_consumer] embedding_failed: {exc}", flush=True)
                 embeddings = [None] * len(events)
 
             for event, emb in zip(events, embeddings, strict=False):
@@ -133,7 +134,19 @@ async def _flush_buffer(events: list[dict]) -> None:
             for event in events:
                 await _insert_without_embedding(session, event)
 
-        await session.commit()
+        try:
+            await session.commit()
+        except Exception as exc:
+            print(f"[log_consumer] insert_failed: {exc}", flush=True)
+            await session.rollback()
+            return
+
+    # ACK all processed messages
+    if msg_ids:
+        try:
+            await redis.xack(_STREAM_KEY, _CONSUMER_GROUP, *msg_ids)
+        except Exception:
+            pass
 
 
 async def _insert_with_embedding(
@@ -163,21 +176,7 @@ async def _insert_with_embedding(
             },
         )
     else:
-        await session.execute(
-            text(
-                "INSERT INTO system_logs "
-                "(id, timestamp, level, logger_name, message, context) "
-                "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb)"
-            ),
-            {
-                "id": log_id,
-                "ts": ts,
-                "lvl": event.get("level", "INFO"),
-                "ln": event.get("logger_name", "unknown"),
-                "msg": event.get("message", ""),
-                "ctx": ctx,
-            },
-        )
+        await _insert_without_embedding(session, event)
 
 
 async def _insert_without_embedding(session: any, event: dict) -> None:
