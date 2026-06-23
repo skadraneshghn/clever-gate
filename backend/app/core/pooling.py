@@ -1,10 +1,23 @@
 """Connection pool management for Redis and HTTP clients."""
 from __future__ import annotations
 
+import socket as _socket
+
 import httpx
 import redis.asyncio as aioredis
 
 from app.config import get_settings
+
+# Build socket keepalive options using integer constants (not strings).
+# TCP_KEEPIDLE / TCP_KEEPINTVL / TCP_KEEPCNT are Linux-specific; guard with
+# hasattr so the code also works on macOS / Windows without crashing.
+_KEEPALIVE_OPTS: dict[int, int] = {}
+if hasattr(_socket, "TCP_KEEPIDLE"):
+    _KEEPALIVE_OPTS[_socket.TCP_KEEPIDLE] = 30   # seconds idle before first probe
+if hasattr(_socket, "TCP_KEEPINTVL"):
+    _KEEPALIVE_OPTS[_socket.TCP_KEEPINTVL] = 10  # seconds between probes
+if hasattr(_socket, "TCP_KEEPCNT"):
+    _KEEPALIVE_OPTS[_socket.TCP_KEEPCNT] = 3     # probes before declaring dead
 
 # Redis pool
 _redis: aioredis.Redis | None = None
@@ -21,14 +34,7 @@ async def get_redis() -> aioredis.Redis:
             # Keep TCP connections alive so managed Redis proxies
             # (Clever Cloud, Heroku, etc.) don't drop idle blocking sockets.
             socket_keepalive=True,
-            socket_keepalive_options={
-                # Seconds before sending the first keepalive probe
-                "TCP_KEEPIDLE": 30,
-                # Seconds between subsequent keepalive probes
-                "TCP_KEEPINTVL": 10,
-                # Number of failed probes before declaring dead
-                "TCP_KEEPCNT": 3,
-            },
+            socket_keepalive_options=_KEEPALIVE_OPTS,
             # redis-py periodically pings the connection to detect stale sockets
             health_check_interval=30,
             # Surface connection errors quickly rather than hanging
