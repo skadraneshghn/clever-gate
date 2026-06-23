@@ -29,7 +29,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { PageHeader, FadeIn } from "../../../components/anim";
-import { api, getAccessToken, getApiBase } from "../../../lib";
+import { api, getAccessToken, getApiBase, getRefreshToken, setTokens } from "../../../lib";
 import type { SystemLog, Paginated } from "../../../lib/types";
 
 const MAX_LIVE_LOGS = 500;
@@ -64,6 +64,11 @@ export default function LogsPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const autoScrollRef = useRef(true);
   const bufferRef = useRef<SystemLog[]>([]);
+  const liveRef = useRef(live);
+
+  useEffect(() => {
+    liveRef.current = live;
+  }, [live]);
 
   // ── Live WebSocket streaming with auto-reconnect ────────────────────── //
   useEffect(() => {
@@ -73,6 +78,24 @@ export default function LogsPage() {
     let retryCount = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
+
+    const refreshToken = async (): Promise<string | null> => {
+      const refresh = getRefreshToken();
+      if (!refresh) return null;
+      try {
+        const res = await fetch(`${getApiBase()}/api/admin/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        setTokens(data.access_token, data.refresh_token);
+        return data.access_token as string;
+      } catch {
+        return null;
+      }
+    };
 
     const connect = () => {
       if (cancelled) return;
@@ -88,14 +111,22 @@ export default function LogsPage() {
         retryCount = 0;
       };
 
-      ws.onclose = () => {
+      ws.onclose = async (ev) => {
         setConnected(false);
         wsRef.current = null;
-        if (!cancelled && mode === "live") {
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          retryCount++;
-          reconnectTimer = setTimeout(connect, delay);
+        if (cancelled || mode !== "live") return;
+
+        // Auth rejection (expired token) — try refreshing before reconnecting
+        if (ev.code === 1008) {
+          const newToken = await refreshToken();
+          if (cancelled) return;
+          if (!newToken) return; // Can't refresh — user must log in again
+          retryCount = 0;
         }
+
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+        retryCount++;
+        reconnectTimer = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {
@@ -119,7 +150,7 @@ export default function LogsPage() {
             };
           });
           bufferRef.current = [...bufferRef.current, ...newLogs].slice(-MAX_LIVE_LOGS);
-          if (live) {
+          if (liveRef.current) {
             setLogs([...bufferRef.current]);
           }
         } catch {
@@ -139,7 +170,7 @@ export default function LogsPage() {
       }
       wsRef.current = null;
     };
-  }, [mode, live]);
+  }, [mode]);
 
   // ── Auto-scroll ─────────────────────────────────────────────────────── //
   useEffect(() => {

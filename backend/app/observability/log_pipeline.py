@@ -10,7 +10,7 @@ Architecture (3 stages, all non-blocking):
      (for real-time WebSocket fan-out).
   3. **Persistence** — A separate background consumer (``log_consumer.py``)
      reads from the Redis Stream, generates vector embeddings via the
-     ProcessPool, and bulk-inserts into PostgreSQL.
+     executor, and bulk-inserts into PostgreSQL.
 """
 
 from __future__ import annotations
@@ -24,10 +24,6 @@ from typing import Any
 
 import orjson
 
-from app.observability.logging import get_logger
-
-logger = get_logger(__name__)
-
 # ── Configuration ─────────────────────────────────────────────────────────── #
 
 _QUEUE_MAXSIZE = 10_000
@@ -35,6 +31,7 @@ _REDIS_STREAM_KEY = "cg:logs:stream"
 _REDIS_PUBSUB_CHANNEL = "cg:logs:pubsub"
 _FLUSH_BATCH_SIZE = 50
 _FLUSH_INTERVAL = 0.15  # seconds
+_MAX_BATCH = _FLUSH_BATCH_SIZE * 4  # cap to prevent unbounded growth on Redis outage
 
 # ── Stage 1: in-memory capture queue ──────────────────────────────────────── #
 
@@ -173,15 +170,20 @@ async def _transport_loop() -> None:
             if batch:
                 try:
                     await _flush_batch(redis, batch)
+                    batch.clear()
                 except Exception as exc:
                     # Use print, not logger, to avoid feedback loop
                     print(f"[log_transport] flush error: {exc}", flush=True)
-                batch.clear()
+                    # Keep batch for retry — trim if exceeding cap
+                    if len(batch) > _MAX_BATCH:
+                        del batch[: len(batch) - _MAX_BATCH]
             await asyncio.sleep(_FLUSH_INTERVAL)
         except Exception as exc:
             # Use print, not logger, to avoid feedback loop
             print(f"[log_transport] error: {exc}", flush=True)
-            batch.clear()
+            # Don't clear batch on flush failure — trim if exceeding cap
+            if len(batch) > _MAX_BATCH:
+                del batch[: len(batch) - _MAX_BATCH]
             await asyncio.sleep(1)
 
     if batch:

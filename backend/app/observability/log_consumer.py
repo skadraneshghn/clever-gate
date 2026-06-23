@@ -163,7 +163,7 @@ async def _insert_with_embedding(
             text(
                 "INSERT INTO system_logs "
                 "(id, timestamp, level, logger_name, message, context, embedding) "
-                "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb, :emb::vector)"
+                "VALUES (:id, :ts, :lvl, :ln, :msg, CAST(:ctx AS jsonb), CAST(:emb AS vector))"
             ),
             {
                 "id": log_id,
@@ -189,7 +189,7 @@ async def _insert_without_embedding(session: any, event: dict) -> None:
         text(
             "INSERT INTO system_logs "
             "(id, timestamp, level, logger_name, message, context) "
-            "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb)"
+            "VALUES (:id, :ts, :lvl, :ln, :msg, CAST(:ctx AS jsonb))"
         ),
         {
             "id": log_id,

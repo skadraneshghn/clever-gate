@@ -89,53 +89,89 @@ async def _authenticate(token: str) -> User | None:
 
 
 async def _stream_loop(websocket: WebSocket, level_filter: str | None) -> None:
-    """Subscribe to Redis Pub/Sub and stream batched log events."""
-    redis = await get_redis()
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(_PUBSUB_CHANNEL)
+    """Subscribe to Redis Pub/Sub and stream batched log events.
 
+    Handles Redis connection failures gracefully — if Redis is temporarily
+    unavailable the WebSocket stays alive (sending heartbeats) and retries
+    the subscription instead of crashing.
+    """
     batch: list[str] = []
     loop = asyncio.get_running_loop()
     last_flush = loop.time()
+    last_activity = loop.time()
+
+    pubsub = None
 
     try:
         while True:
-            try:
-                msg = await asyncio.wait_for(
-                    pubsub.get_message(ignore_subscribe_messages=True, timeout=1),
-                    timeout=2,
-                )
-            except asyncio.TimeoutError:
-                msg = None
+            # (Re)connect to Redis Pub/Sub if needed
+            if pubsub is None:
+                try:
+                    redis = await get_redis()
+                    pubsub = redis.pubsub()
+                    await pubsub.subscribe(_PUBSUB_CHANNEL)
+                except Exception:
+                    pubsub = None
 
+            # Try to get a message (only if pubsub is connected)
+            msg = None
+            if pubsub is not None:
+                try:
+                    msg = await asyncio.wait_for(
+                        pubsub.get_message(
+                            ignore_subscribe_messages=True, timeout=1
+                        ),
+                        timeout=2,
+                    )
+                except asyncio.TimeoutError:
+                    msg = None
+                except Exception:
+                    try:
+                        await pubsub.aclose()
+                    except Exception:
+                        pass
+                    pubsub = None
+
+            # Process message
             if msg and msg.get("type") == "message":
                 raw = msg.get("data")
                 if isinstance(raw, bytes):
                     raw = raw.decode("utf-8")
                 if raw:
+                    should_append = True
                     if level_filter:
                         try:
                             event = json.loads(raw)
                             if event.get("level", "").upper() != level_filter.upper():
-                                continue
+                                should_append = False
                         except json.JSONDecodeError:
                             pass
-                    batch.append(raw)
+                    if should_append:
+                        batch.append(raw)
+                        last_activity = loop.time()
 
             now = loop.time()
             if batch and (len(batch) >= 50 or now - last_flush >= _BATCH_WINDOW):
-                payload = json.dumps(batch)
-                await websocket.send_text(payload)
+                await websocket.send_text(json.dumps(batch))
                 batch.clear()
                 last_flush = now
+                last_activity = now
 
-            # Heartbeat
-            if now - last_flush > _HEARTBEAT_INTERVAL:
+            # Heartbeat — keeps the WebSocket alive when idle
+            if now - last_activity >= _HEARTBEAT_INTERVAL:
                 await websocket.send_text(json.dumps({"type": "heartbeat"}))
-                last_flush = now
+                last_activity = now
+
+            # If Redis is down, sleep before retrying to avoid a tight loop
+            if pubsub is None:
+                await asyncio.sleep(1)
     finally:
-        await pubsub.unsubscribe(_PUBSUB_CHANNEL)
-        await pubsub.aclose()
+        if pubsub is not None:
+            try:
+                await pubsub.unsubscribe(_PUBSUB_CHANNEL)
+                await pubsub.aclose()
+            except Exception:
+                pass
 
 
 __all__ = ["router"]
