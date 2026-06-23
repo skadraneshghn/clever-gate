@@ -52,7 +52,11 @@ class LiteLLMAdapter:
 
         payload = self._build_payload(deployment, request, stream=False)
         response = await self._acompletion(payload, router=router)
-        return ChatCompletionResponse.model_validate(response)
+        # LiteLLM returns a ModelResponse object; Pydantic v2 model_validate
+        # requires a dict (not an arbitrary object), so convert first.
+        return ChatCompletionResponse.model_validate(
+            response.model_dump() if hasattr(response, "model_dump") else dict(response)
+        )
 
     async def stream_chat(
         self,
