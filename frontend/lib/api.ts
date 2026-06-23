@@ -26,7 +26,25 @@ export function clearTokens(): void {
 }
 
 export function getApiBase(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (typeof window !== "undefined") {
+    // Client-side: if NEXT_PUBLIC_API_URL is configured and not localhost, use it
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl;
+    }
+
+    // Local dev fallback
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return envUrl || "http://localhost:8000";
+    }
+
+    // Production: use current origin (Nginx proxies /api and /v1 to the backend)
+    return window.location.origin;
+  }
+
+  // Server-side fallback
+  return envUrl || "http://127.0.0.1:8000";
 }
 
 export class ApiClientError extends Error {
