@@ -21,28 +21,6 @@ from app.api.deps import openai_error
 router = APIRouter()
 
 
-@router.get("/chat/completions", include_in_schema=False)
-async def chat_completions_method_not_allowed():
-    """Return a proper JSON 405 for clients that probe with GET (e.g. Cline).
-
-    FastAPI's default 405 has no body, which causes some clients to crash with
-    an unhelpful 'no body' error. This stub returns a well-formed OpenAI-style
-    error response instead.
-    """
-    from fastapi.responses import JSONResponse
-    return JSONResponse(
-        status_code=405,
-        content={
-            "error": {
-                "message": "This endpoint only supports POST requests.",
-                "type": "invalid_request_error",
-                "code": "method_not_allowed",
-            }
-        },
-        headers={"Allow": "POST"},
-    )
-
-
 @router.post("/chat/completions")
 async def create_chat_completion(
     request: Request,
