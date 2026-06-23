@@ -83,7 +83,8 @@ export default function ProvidersPage() {
       else await loadKeys();
       setLoading(false);
     })();
-  }, [tab, loadProviders, loadDeployments, loadKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   const handleDelete = (type: Tab, id: string) => {
     confirm({

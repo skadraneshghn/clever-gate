@@ -72,6 +72,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window_seconds = window_seconds
 
     async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting for admin panel and health check endpoints
+        path = request.url.path
+        if path.startswith("/api/admin/") or path.startswith("/health") or path.startswith("/metrics"):
+            return await call_next(request)
+
         api_key = self._extract_api_key(request)
         if api_key is not None:
             key_hash = hash_api_key(api_key)
@@ -114,5 +119,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _extract_api_key(request: Request) -> str | None:
         auth = request.headers.get("Authorization", "")
         if auth.lower().startswith("bearer "):
-            return auth[7:].strip() or None
+            token = auth[7:].strip()
+            # Only treat as API key if it starts with the valid sk-cg- prefix
+            if token.startswith("sk-cg-"):
+                return token
         return None
