@@ -1,8 +1,9 @@
 """Clever Gateway — FastAPI application entry point.
 
 Wires together the lifespan (DB/Redis/process pool setup), middleware
-(request-id, logging, rate-limit, CORS, Prometheus), and routers (OpenAI v1 +
-admin). This is the ASGI app referenced by ``uvicorn app.main:app``.
+(request-id, logging, CORS), and routers (OpenAI v1 + admin + metrics).
+Rate limiting is enforced per-key via the ``enforce_rate_limit`` dependency
+on individual endpoints, not as a global middleware.
 """
 
 from __future__ import annotations
@@ -13,10 +14,9 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_fastapi_instrumentator import Instrumentator
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.admin import router as admin_router
+from app.api.metrics import router as metrics_router
 from app.api.v1 import router as v1_router
 from app.api.v1.health import router as health_router
 from app.config import get_settings
@@ -24,7 +24,6 @@ from app.core.concurrency import shutdown_process_pool
 from app.core.pooling import close_http_clients, close_redis
 from app.db.session import dispose_engine
 from app.middleware.logging import LoggingMiddleware
-from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.observability.logging import get_logger, setup_logging
 from app.providers.registry import register_default_adapters
@@ -81,11 +80,6 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(
-        RateLimitMiddleware,
-        limit=120,
-        window_seconds=60,
-    )
-    app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CG_CORS_ORIGINS,
         allow_credentials=True,
@@ -94,15 +88,9 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(metrics_router)
     app.include_router(v1_router)
     app.include_router(admin_router)
-
-    # Prometheus metrics — disabled due to incompatibility between
-    # prometheus-fastapi-instrumentator and current FastAPI/Starlette
-    # (_IncludedRouter has no .path attribute). Re-enable after upgrading.
-    # Instrumentator(
-    #     should_group_status_codes=False,
-    # ).instrument(app).expose(app, endpoint="/metrics")
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):

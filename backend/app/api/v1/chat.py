@@ -8,13 +8,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_api_key
 from app.core.engine import CoreEngine
 from app.core.streaming import format_sse, format_sse_done
 from app.db.models.api_key import ApiKey
 from app.db.models.provider import Deployment
 from app.db.models.user import User
 from app.db.session import get_db
+from app.middleware.rate_limit import enforce_rate_limit
 from app.schemas.openai import ChatCompletionRequest
 from app.api.deps import openai_error
 
@@ -25,7 +25,7 @@ router = APIRouter()
 async def create_chat_completion(
     request: Request,
     body: ChatCompletionRequest,
-    auth: tuple[ApiKey, User] = Depends(get_current_api_key),
+    auth: tuple[ApiKey, User] = Depends(enforce_rate_limit),
     db: AsyncSession = Depends(get_db),
 ):
     """Handle a chat completion request (streaming or non-streaming)."""

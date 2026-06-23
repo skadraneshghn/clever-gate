@@ -873,7 +873,7 @@ nginx listens on 8080: `/v1/*` and `/api/admin/*` and `/health` → FastAPI (for
 | `REDIS_URL`                   | from Redis addon (`REDIS_ADDON_URL`)             |
 | `CG_MASTER_KEY`               | (secret)                                         |
 | `CG_JWT_SECRET`               | (secret)                                         |
-| `CG_ADMIN_USERNAME`           | `slaman` (also from seed)                        |
+| `CG_ADMIN_USERNAME`           | `salman` (also from seed)                        |
 | `CG_ADMIN_PASSWORD`           | (secret; must match final value in seed)         |
 
 > Health check: Clever Cloud automatically checks the root path. It is better if `/health` also responds on `/`, or a rewrite is applied.
@@ -907,14 +907,14 @@ def upgrade():
     bind = op.get_bind()
     exists = bind.execute(sa.text(
         "SELECT 1 FROM users WHERE username = :u"
-    ), {"u": "slaman"}).scalar()
+    ), {"u": "salman"}).scalar()
     if not exists:
         bind.execute(sa.text("""
             INSERT INTO users (username, email, password_hash,
                                first_name, last_name, is_active, is_admin)
             VALUES (:u, :e, :p, :fn, :ln, TRUE, TRUE)
         """), {
-            "u": "slaman",
+            "u": "salman",
             "e": "olddealers@gmail.com",
             "p": argon2.hash("136517"),
             "fn": "Salman",
@@ -922,14 +922,14 @@ def upgrade():
         })
 
 def downgrade():
-    op.execute("DELETE FROM users WHERE username = 'slaman'")
+    op.execute("DELETE FROM users WHERE username = 'salman'")
 ```
 
 > **Security:** the password `136517` must be overridden in production via env (`CG_ADMIN_PASSWORD`); the seed is only for the initial bootstrap. It is recommended to change the password after the first login.
 
 | Field      | Seed Value             |
 | ---------- | ---------------------- |
-| username   | `slaman`               |
+| username   | `salman`               |
 | password   | `136517` (hashed)      |
 | email      | `olddealers@gmail.com` |
 | first_name | `Salman`               |
@@ -1055,7 +1055,7 @@ Goal: T_queue ≈ 0, T_guardrail non-blocking, T_upstream minimized with less-bu
 | Virtual keys + rate limit              |    ✅    |         |         |         |
 | Admin panel (providers/keys/dashboard) |    ✅    |         |         |         |
 | Semantic cache (L1+L2)                 |         |    ✅    |         |         |
-| Spend tracking + audit                 |   base  |    ✅    |         |         |
+| Spend tracking + audit                 |  base   |    ✅    |         |         |
 | Payload splitting                      |         |         |    ✅    |         |
 | Context compression                    |         |         |    ✅    |         |
 | PII / Prompt guard                     |         |         |    ✅    |         |

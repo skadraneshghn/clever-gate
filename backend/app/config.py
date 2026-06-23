@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     CG_ENCRYPTION_KEY: str = ""
 
     # Admin seed
-    CG_ADMIN_USERNAME: str = "slaman"
+    CG_ADMIN_USERNAME: str = "salman"
     CG_ADMIN_PASSWORD: str = "136517"
     CG_ADMIN_EMAIL: str = "olddealers@gmail.com"
     CG_ADMIN_FIRST_NAME: str = "Salman"

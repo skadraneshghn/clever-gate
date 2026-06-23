@@ -1,15 +1,32 @@
-"""Rate limiting via Redis sliding-window sorted sets."""
+"""Rate limiting via Redis sliding-window sorted sets.
+
+Rate limiting is enforced **per virtual API key** through the
+``enforce_rate_limit`` FastAPI dependency, not as a global middleware.  The
+limit for each key is read from the ``rate_limits`` table (cached in Redis)
+so different keys can have different limits, and keys without a configured
+limit are unrestricted — supporting the gateway's "unlimited throughput"
+design goal.
+"""
+
 from __future__ import annotations
 
 import time
 import uuid
 from typing import TYPE_CHECKING
 
+from fastapi import Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from app.auth.api_key import hash_api_key
+from app.auth.dependencies import get_current_api_key
 from app.core.pooling import get_redis
+from app.db.models.api_key import ApiKey
+from app.db.models.tracking import RateLimit
+from app.db.models.user import User
+from app.db.session import get_db
 from app.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -18,6 +35,8 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 _WINDOW_KEY = "cg:ratelimit:{key}"
+_RL_CACHE_KEY = "cg:keyrl:{api_key_id}"
+_RL_CACHE_TTL = 60  # seconds — short so config changes propagate quickly
 
 
 async def check_rate_limit(
@@ -74,7 +93,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for admin panel and health check endpoints
         path = request.url.path
-        if path.startswith("/api/admin/") or path.startswith("/health") or path.startswith("/metrics"):
+        if (
+            path.startswith("/api/admin/")
+            or path.startswith("/health")
+            or path.startswith("/metrics")
+        ):
             return await call_next(request)
 
         api_key = self._extract_api_key(request)
@@ -124,3 +147,100 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if token.startswith("sk-cg-"):
                 return token
         return None
+
+
+# --------------------------------------------------------------------------- #
+# Per-key dynamic rate-limit dependency
+# --------------------------------------------------------------------------- #
+
+async def _get_cached_rpm_limit(
+    db: AsyncSession,
+    api_key_id: str,
+) -> int | None:
+    """Return the RPM limit for *api_key_id*, cached in Redis.
+
+    Queries the ``rate_limits`` table for an active, api-key-scoped limit.
+    The result is cached for ``_RL_CACHE_TTL`` seconds so repeated requests
+    don't hit the database.  ``None`` means "no limit configured" (unlimited).
+    """
+    redis = await get_redis()
+    cache_key = _RL_CACHE_KEY.format(api_key_id=api_key_id)
+
+    cached = await redis.get(cache_key)
+    if cached is not None:
+        val = int(cached)
+        return val if val > 0 else None
+
+    result = await db.execute(
+        select(RateLimit.rpm)
+        .where(RateLimit.api_key_id == api_key_id)
+        .where(RateLimit.is_active.is_(True))
+        .where(RateLimit.scope == "api_key")
+        .limit(1)
+    )
+    rpm = result.scalar_one_or_none()
+
+    await redis.setex(cache_key, _RL_CACHE_TTL, str(rpm or 0))
+    return rpm
+
+
+async def enforce_rate_limit(
+    auth: tuple[ApiKey, User] = Depends(get_current_api_key),
+    db: AsyncSession = Depends(get_db),
+) -> tuple[ApiKey, User]:
+    """FastAPI dependency: enforce per-key rate limiting.
+
+    Replaces the global ``RateLimitMiddleware``.  Looks up the RPM limit for
+    the authenticated API key from the database (cached in Redis) and, when a
+    limit is configured, checks the sliding-window counter.  Keys without a
+    configured limit are unrestricted.
+
+    Use this in place of ``get_current_api_key`` on endpoints that need rate
+    limiting — it returns the same ``(ApiKey, User)`` tuple.
+    """
+    api_key, user = auth
+
+    try:
+        rpm_limit = await _get_cached_rpm_limit(db, str(api_key.id))
+    except Exception as exc:
+        logger.warning(
+            "rate_limit.config_lookup_failed",
+            error=str(exc),
+            api_key_id=str(api_key.id),
+        )
+        rpm_limit = None
+
+    if rpm_limit is None or rpm_limit <= 0:
+        return auth
+
+    try:
+        allowed, remaining = await check_rate_limit(
+            f"apikey:{api_key.key_hash}",
+            rpm_limit,
+            60,
+        )
+    except Exception as exc:
+        logger.warning(
+            "rate_limit.redis_error",
+            error=str(exc),
+            api_key_id=str(api_key.id),
+        )
+        return auth
+
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": {
+                    "message": "Rate limit exceeded",
+                    "type": "rate_limit_error",
+                }
+            },
+            headers={
+                "X-RateLimit-Limit": str(rpm_limit),
+                "X-RateLimit-Remaining": "0",
+                "Retry-After": "60",
+            },
+        )
+
+    return auth

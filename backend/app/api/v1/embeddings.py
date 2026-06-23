@@ -5,11 +5,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_api_key
 from app.core.engine import CoreEngine
 from app.db.models.api_key import ApiKey
 from app.db.models.user import User
 from app.db.session import get_db
+from app.middleware.rate_limit import enforce_rate_limit
 from app.schemas.openai import EmbeddingRequest
 from app.api.deps import openai_error
 
@@ -19,7 +19,7 @@ router = APIRouter()
 @router.post("/embeddings")
 async def create_embedding(
     body: EmbeddingRequest,
-    auth: tuple[ApiKey, User] = Depends(get_current_api_key),
+    auth: tuple[ApiKey, User] = Depends(enforce_rate_limit),
     db: AsyncSession = Depends(get_db),
 ):
     """Handle an embedding request."""

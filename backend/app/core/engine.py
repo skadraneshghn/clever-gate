@@ -1,22 +1,31 @@
 """Core engine — async orchestration of the request lifecycle.
 
-The engine ties together cache lookup, payload splitting (phase 3 hooks),
-provider dispatch, streaming, and observability. It is the heart of design
-principles D2 (zero start latency), D3 (full parallelization) and D4
-(unlimited payload handling).
+The engine ties together cache lookup, payload splitting, provider dispatch,
+streaming, and observability. It is the heart of design principles D2 (zero
+start latency), D3 (full parallelization) and D4 (unlimited payload handling).
 
 Each request becomes an independent coroutine immediately — there is no global
 blocking queue. Independent pre-flight tasks (auth context, cache lookup) are
 gathered concurrently; the upstream call is dispatched through the load
 balancer with circuit-breaker protection.
+
+Multi-worker / multi-instance safety
+------------------------------------
+The ``LoadBalancer`` is stateless: all mutable routing state — cooldown flags
+and circuit-breaker failure counts — lives in **Redis** (see
+``app/routing/cooldown.py`` and ``app/routing/breaker.py``).  Every Uvicorn
+worker and every container instance shares the same view of deployment health.
 """
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any
 
+from app.config import get_settings
 from app.observability.logging import get_logger
 from app.observability.metrics import (
     cg_cache_hits_total,
@@ -41,7 +50,7 @@ class CoreEngine:
     """Orchestrates a single chat-completion request end-to-end.
 
     The engine is instantiated per request (lightweight) and holds the
-    request-scarded context: api key, user, request id, and timing.
+    request-scoped context: api key, user, request id, and timing.
     """
 
     def __init__(
@@ -53,7 +62,15 @@ class CoreEngine:
         self.api_key = api_key
         self.user = user
         self.request_id = str(uuid.uuid4())
-        self.load_balancer = load_balancer or LoadBalancer()
+        if load_balancer is not None:
+            self.load_balancer = load_balancer
+        else:
+            settings = get_settings()
+            self.load_balancer = LoadBalancer(
+                max_retries=settings.CG_NUM_RETRIES,
+                cooldown_time=settings.CG_COOLDOWN_TIME,
+                max_fails=settings.CG_ALLOWED_FAILS,
+            )
 
     async def chat_completion(
         self,
@@ -62,7 +79,10 @@ class CoreEngine:
         """Process a non-streaming chat completion.
 
         1. Check L1 exact cache → return on hit.
-        2. Dispatch through the load balancer / provider adapter.
+        2. If the payload exceeds the chunk threshold, split it into
+           sub-conversations and dispatch them in parallel (design principle
+           D4 — unlimited payload handling). The text splitter runs in the
+           ProcessPool so the event loop stays unblocked.
         3. Record metrics, log spend, fill cache.
         """
         from app.cache import exact as cache
@@ -97,11 +117,7 @@ class CoreEngine:
         adapter = get_registry().get_required("litellm")
         deployment = await self._select_deployment(model, router)
 
-        result = await adapter.chat(
-            deployment,
-            request,
-            router=router,
-        )
+        result = await self._dispatch_with_split(adapter, deployment, request, model, router)
         response_dict = result.model_dump()
 
         elapsed = time.perf_counter() - start
@@ -279,6 +295,53 @@ class CoreEngine:
                 "provider_name": first.get("model_name", model),
             }
         raise RuntimeError(f"No deployments found for model {model!r}")
+
+    async def _dispatch_with_split(
+        self,
+        adapter: Any,
+        deployment: dict[str, Any],
+        request: ChatCompletionRequest,
+        model: str,
+        router: Any,
+    ) -> Any:
+        """Dispatch a chat completion, splitting large payloads in parallel.
+
+        Uses :func:`map_reduce_split` (backed by the ProcessPool text splitter)
+        to break oversized conversations into sub-conversations. When splitting
+        occurs, all sub-requests are dispatched concurrently via
+        ``asyncio.gather`` and their responses are merged with
+        :func:`reduce_responses`.
+
+        For payloads under the threshold — the common case — this is a
+        zero-overhead passthrough to ``adapter.chat``.
+        """
+        from app.payload.aggregator import map_reduce_split, reduce_responses
+
+        sub_conversations = await map_reduce_split(request.messages)
+
+        if len(sub_conversations) <= 1:
+            return await adapter.chat(deployment, request, router=router)
+
+        logger.info(
+            "engine.payload_split",
+            request_id=self.request_id,
+            model=model,
+            chunks=len(sub_conversations),
+        )
+
+        sub_requests = [
+            request.model_copy(update={"messages": sub})
+            for sub in sub_conversations
+        ]
+
+        tasks = [
+            adapter.chat(deployment, sub_req, router=router)
+            for sub_req in sub_requests
+        ]
+        results = await asyncio.gather(*tasks)
+
+        merged = reduce_responses([r.model_dump() for r in results])
+        return type(results[0]).model_validate(merged)
 
 
 _engine: CoreEngine | None = None
