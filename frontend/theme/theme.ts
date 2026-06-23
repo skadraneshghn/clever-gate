@@ -20,26 +20,26 @@ export const theme: MantineThemeOverride = createTheme({
   colors: {
     brand: brandColors,
   },
-  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   headings: {
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    fontWeight: "700",
+    fontFamily: "var(--font-outfit), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontWeight: "800",
   },
-  defaultRadius: "md",
+  defaultRadius: "lg",
   components: {
     Button: {
-      defaultProps: { fw: 600 },
+      defaultProps: { fw: 700, radius: "md" },
     },
     Card: {
-      defaultProps: { withBorder: true, shadow: "xs" },
+      defaultProps: { withBorder: true, shadow: "sm", radius: "lg" },
     },
     Table: {
-      defaultProps: { highlightOnHover: true, verticalSpacing: "sm" },
+      defaultProps: { highlightOnHover: true, verticalSpacing: "md" },
     },
     NavLink: {
       styles: (_theme: MantineTheme) => ({
         root: {
-          borderRadius: "8px",
+          borderRadius: "10px",
         },
       }),
     },

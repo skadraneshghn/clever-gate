@@ -97,14 +97,22 @@ class LiteLLMAdapter:
     async def health_check(self, deployment: dict[str, Any]) -> bool:
         """Lightweight health check — a 1-token completion."""
         model = deployment["litellm_model"]
+        # litellm_params carries the api_key, api_base, etc. from the DB.
+        litellm_params: dict[str, Any] = dict(deployment.get("litellm_params") or {})
         try:
             await litellm.acompletion(
                 model=model,
                 messages=[{"role": "user", "content": "ping"}],
                 max_tokens=1,
+                **litellm_params,
             )
-        except Exception:
-            logger.warning("health_check.failed", model=model)
+        except Exception as exc:
+            logger.warning(
+                "health_check.failed",
+                model=model,
+                error=str(exc),
+                exc_type=type(exc).__name__,
+            )
             return False
         return True
 

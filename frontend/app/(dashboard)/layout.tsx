@@ -41,20 +41,22 @@ export default function DashboardLayout({
   const title = titleMap[pathname] ?? "Clever Gateway";
 
   return (
-    <AppShell
-      header={{ height: 56 }}
-      navbar={{ width: 260, breakpoint: "sm" }}
-      padding="lg"
-    >
-      {/* Decorative floating orbs — pure CSS, GPU-accelerated, non-interactive */}
-      <div className="cg-orb cg-orb-1" aria-hidden />
-      <div className="cg-orb cg-orb-2" aria-hidden />
+    <div className="cg-window-shell">
+      <AppShell
+        header={{ height: 56 }}
+        navbar={{ width: 260, breakpoint: "sm" }}
+        padding="lg"
+      >
+        {/* Decorative floating orbs — pure CSS, GPU-accelerated, non-interactive */}
+        <div className="cg-orb cg-orb-1" aria-hidden />
+        <div className="cg-orb cg-orb-2" aria-hidden />
 
-      <Topbar title={title} />
-      <Sidebar />
-      <AppShell.Main>
-        <PageTransition>{children}</PageTransition>
-      </AppShell.Main>
-    </AppShell>
+        <Topbar title={title} />
+        <Sidebar />
+        <AppShell.Main>
+          <PageTransition>{children}</PageTransition>
+        </AppShell.Main>
+      </AppShell>
+    </div>
   );
 }

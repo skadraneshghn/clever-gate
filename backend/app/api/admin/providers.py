@@ -104,9 +104,10 @@ async def test_provider(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
-    """Run a manual health-check against the provider's first deployment."""
+    """Run a manual health-check against the provider's first enabled deployment."""
     from sqlalchemy import select
 
+    # Load the first enabled deployment for this provider
     result = await db.execute(
         select(Deployment)
         .where(Deployment.provider_id == provider_id)
@@ -117,15 +118,61 @@ async def test_provider(
     if deployment is None:
         raise HTTPException(status_code=404, detail="No enabled deployment for this provider")
 
+    # Load the provider (for base_url)
+    provider = await provider_service.get_provider(db, provider_id)
+    if provider is None:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    # Load the first enabled provider key so we can pass the API key to LiteLLM
+    key_result = await db.execute(
+        select(ProviderKey)
+        .where(ProviderKey.provider_id == provider_id)
+        .where(ProviderKey.is_enabled.is_(True))
+        .limit(1)
+    )
+    provider_key = key_result.scalar_one_or_none()
+
+    # Build litellm_params with the decrypted api_key and api_base
+    litellm_params: dict = dict(deployment.litellm_params or {})
+    if provider_key is not None:
+        from app.utils.crypto import decrypt
+        try:
+            api_key = decrypt(provider_key.encrypted_key)
+            litellm_params.setdefault("api_key", api_key)
+        except Exception as exc:
+            logger.error("test_provider.decrypt_failed", provider_key_id=str(provider_key.id), error=str(exc))
+            raise HTTPException(status_code=500, detail="Failed to decrypt provider API key")
+
+    if provider.base_url:
+        litellm_params.setdefault("api_base", provider.base_url)
+
     from app.providers.registry import get_registry
 
     adapter = get_registry().get_required("litellm")
     descriptor = {
         "litellm_model": deployment.litellm_model,
-        "litellm_params": deployment.litellm_params or {},
+        "litellm_params": litellm_params,
     }
+
+    logger.info(
+        "test_provider.start",
+        provider_id=str(provider_id),
+        model=deployment.litellm_model,
+        has_key=provider_key is not None,
+    )
+
     healthy = await adapter.health_check(descriptor)
-    return {"healthy": healthy}
+    if not healthy:
+        logger.warning(
+            "test_provider.unhealthy",
+            provider_id=str(provider_id),
+            model=deployment.litellm_model,
+        )
+        raise HTTPException(status_code=502, detail="Health check failed — see System Logs for the exact error")
+
+    logger.info("test_provider.healthy", provider_id=str(provider_id), model=deployment.litellm_model)
+    return {"healthy": True}
+
 
 
 # --------------------------------------------------------------------------- #

@@ -11,7 +11,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Premium Animated Mesh Gradient Background */
+/* Premium Vibrant Animated Mesh Gradient Background */
 body::before {
   content: "";
   position: fixed;
@@ -20,14 +20,14 @@ body::before {
   right: 0;
   bottom: 0;
   z-index: -2;
-  background: linear-gradient(-45deg, #f1f3f9, #fafbfe, #eef2ff, #f8f6fc);
-  background-size: 400% 400%;
-  animation: bg-gradient 25s ease infinite;
+  background: linear-gradient(135deg, #a5f3fc 0%, #c7d2fe 30%, #fbcfe8 60%, #ffedd5 100%);
+  background-size: 300% 300%;
+  animation: bg-gradient 25s ease-infinite;
 }
 
 [data-mantine-color-scheme="dark"] body::before {
-  background: linear-gradient(-45deg, #090a0f, #111422, #0d0f17, #160e24);
-  background-size: 400% 400%;
+  background: linear-gradient(135deg, #090b11 0%, #111428 35%, #25103a 70%, #1e1111 100%);
+  background-size: 300% 300%;
 }
 
 @keyframes bg-gradient {
@@ -36,116 +36,256 @@ body::before {
   100% { background-position: 0% 50%; }
 }
 
-/* Translucent Glassmorphism variables */
+/* Base Body variables */
 :root {
-  --mantine-color-body: rgba(255, 255, 255, 0.45) !important;
+  --mantine-color-body: rgba(255, 255, 255, 0.4) !important;
 }
 
 [data-mantine-color-scheme="dark"] {
-  --mantine-color-body: rgba(13, 16, 23, 0.6) !important;
+  --mantine-color-body: rgba(13, 16, 23, 0.5) !important;
 }
 
-/* Glassmorphic AppShell components */
+/* Floating Desktop Window App Shell Style */
+@media (min-width: 1200px) {
+  .cg-window-shell {
+    position: relative;
+    max-width: 1440px;
+    height: calc(100vh - 64px);
+    margin: 32px auto;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 35px 90px rgba(0, 0, 0, 0.08), 0 15px 35px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background-color: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(25px) saturate(180%);
+  }
+
+  [data-mantine-color-scheme="dark"] .cg-window-shell {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(13, 17, 28, 0.45);
+    box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45), 0 15px 35px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Make AppShell parts fit inside the absolute window shell wrapper */
+  .cg-window-shell .mantine-AppShell-root {
+    height: 100%;
+    position: relative;
+    background: transparent !important;
+  }
+
+  .cg-window-shell .mantine-AppShell-header {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+
+  .cg-window-shell .mantine-AppShell-navbar {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100% !important;
+    z-index: 100;
+  }
+
+  .cg-window-shell .mantine-AppShell-main {
+    height: 100%;
+    overflow-y: auto;
+    background: transparent !important;
+    padding-top: var(--app-shell-header-offset, 56px) !important;
+    padding-left: var(--app-shell-navbar-offset, 260px) !important;
+  }
+}
+
+/* MacOS Titlebar Dots */
+.cg-mac-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cg-mac-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.cg-mac-dots:hover .cg-mac-dot {
+  opacity: 1;
+}
+
+.cg-mac-dot.red { background-color: #ff5f56; }
+.cg-mac-dot.yellow { background-color: #ffbd2e; }
+.cg-mac-dot.green { background-color: #27c93f; }
+
+/* Header & Navbar Styling (Glassmorphism & borders) */
 .mantine-AppShell-header {
-  background-color: rgba(255, 255, 255, 0.3) !important;
+  background-color: rgba(255, 255, 255, 0.4) !important;
   backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 [data-mantine-color-scheme="dark"] .mantine-AppShell-header {
-  background-color: rgba(13, 16, 23, 0.45) !important;
+  background-color: rgba(15, 19, 32, 0.5) !important;
   backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .mantine-AppShell-navbar {
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.55) !important;
   backdrop-filter: blur(20px) saturate(180%);
-  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 [data-mantine-color-scheme="dark"] .mantine-AppShell-navbar {
-  background-color: rgba(13, 16, 23, 0.35) !important;
+  background-color: rgba(16, 20, 33, 0.6) !important;
   backdrop-filter: blur(20px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
-/* Premium Card Glass Styling with Subtle Hover Transitions */
+/* Card glass design updates */
 .mantine-Card-root {
-  background-color: rgba(255, 255, 255, 0.35) !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 [data-mantine-color-scheme="dark"] .mantine-Card-root {
-  background-color: rgba(20, 24, 38, 0.35) !important;
+  background-color: rgba(20, 24, 38, 0.55) !important;
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.mantine-Card-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(106, 118, 252, 0.2) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Card-root:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(106, 118, 252, 0.3) !important;
 }
 
 a { color: inherit; text-decoration: none; }
 
-/* Solid backgrounds for Drawer and Modal to ensure legibility and isolate them from the underlying page content */
+/* Drawer / Modals */
 .mantine-Drawer-content, .mantine-Modal-content {
   background-color: #ffffff !important;
-  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.1) !important;
 }
 
 [data-mantine-color-scheme="dark"] .mantine-Drawer-content,
 [data-mantine-color-scheme="dark"] .mantine-Modal-content {
   background-color: #141724 !important;
-  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.35) !important;
   border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .mantine-Drawer-header, .mantine-Modal-header {
   background-color: transparent !important;
 }
 
-/* ── Table row entrance (CSS-only, GPU-friendly) ────────────────────── */
+/* Table styling updates */
+.mantine-Table-thead tr th {
+  font-weight: 750 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--mantine-color-dimmed) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  padding: 12px 16px !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Table-thead tr th {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.mantine-Table-tbody tr td {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Table-tbody tr td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.mantine-Table-tr:hover {
+  background-color: rgba(106, 118, 252, 0.03) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Table-tr:hover {
+  background-color: rgba(106, 118, 252, 0.05) !important;
+}
+
+/* Tabs list styling */
+.mantine-Tabs-list {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-list {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.mantine-Tabs-tab {
+  font-weight: 650 !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+}
+
+.mantine-Tabs-tab:hover {
+  background-color: rgba(106, 118, 252, 0.04) !important;
+}
+
+/* Table row entrance */
 @keyframes cg-row-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Subtle floating decorative orbs (dashboard layout) ─────────────── */
+/* Floating decorative orbs */
 .cg-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(90px);
   z-index: -1;
   pointer-events: none;
   will-change: transform;
 }
 
 .cg-orb-1 {
-  width: 380px; height: 380px;
-  top: -60px; right: 10%;
-  background: radial-gradient(circle, rgba(106, 118, 252, 0.12) 0%, rgba(106, 118, 252, 0) 70%);
-  animation: cg-float-a 20s ease-in-out infinite;
+  width: 400px; height: 400px;
+  top: -80px; right: 15%;
+  background: radial-gradient(circle, rgba(106, 118, 252, 0.15) 0%, rgba(106, 118, 252, 0) 70%);
+  animation: cg-float-a 25s ease-in-out infinite;
 }
 
 .cg-orb-2 {
-  width: 320px; height: 320px;
-  bottom: 5%; left: 8%;
-  background: radial-gradient(circle, rgba(230, 73, 128, 0.08) 0%, rgba(230, 73, 128, 0) 70%);
-  animation: cg-float-b 25s ease-in-out infinite;
+  width: 350px; height: 350px;
+  bottom: 8%; left: 10%;
+  background: radial-gradient(circle, rgba(230, 73, 128, 0.12) 0%, rgba(230, 73, 128, 0) 70%);
+  animation: cg-float-b 30s ease-in-out infinite;
 }
 
 @keyframes cg-float-a {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(40px, 30px) scale(1.1); }
-  66%      { transform: translate(-20px, 50px) scale(0.95); }
+  33%      { transform: translate(50px, 40px) scale(1.1); }
+  66%      { transform: translate(-30px, 60px) scale(0.95); }
 }
 
 @keyframes cg-float-b {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-30px, -40px) scale(1.15); }
+  50%      { transform: translate(-40px, -50px) scale(1.15); }
 }
 
-/* ── Animated gradient text (for login title) ───────────────────────── */
+/* Gradient text */
 .cg-gradient-text {
   background: linear-gradient(135deg, #6a76fc, #be4bdb, #e64980);
   background-size: 200% 200%;
@@ -160,7 +300,7 @@ a { color: inherit; text-decoration: none; }
   50%      { background-position: 100% 50%; }
 }
 
-/* ── Respect reduced-motion preferences ─────────────────────────────── */
+/* Respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
