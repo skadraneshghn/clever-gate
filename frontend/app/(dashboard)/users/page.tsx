@@ -28,7 +28,8 @@ export default function UsersPage() {
       setUsers(res.items);
     } catch (e) { toast(e instanceof Error ? e.message : "Load failed", "error"); }
     finally { setLoading(false); }
-  }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
