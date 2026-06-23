@@ -97,8 +97,8 @@ def create_app() -> FastAPI:
         description="Pure middleware for load balancing and routing AI APIs.",
         version="0.1.0",
         lifespan=lifespan,
-        docs_url="/docs" if not settings.is_production else None,
-        redoc_url="/redoc" if not settings.is_production else None,
+        docs_url="/docs" if (not settings.is_production or settings.CG_DOCS_ENABLED) else None,
+        redoc_url="/redoc" if (not settings.is_production or settings.CG_DOCS_ENABLED) else None,
     )
 
     app.add_middleware(RequestIDMiddleware)

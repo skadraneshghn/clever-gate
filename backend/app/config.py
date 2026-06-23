@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     CG_HTTP_PORT: int = 8080
     CG_LOG_LEVEL: str = "INFO"
     CG_THIRD_PARTY_LOG_LEVEL: str = "WARNING"
+    # Set to true to expose /docs and /redoc in production
+    CG_DOCS_ENABLED: bool = False
 
     # Master key
     CG_MASTER_KEY: str = "sk-cg-master-change-me"
