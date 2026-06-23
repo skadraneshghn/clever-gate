@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     )
 
     # Redis
+    # REDIS_URL is the primary connection string. If the platform (e.g. Clever Cloud)
+    # injects REDIS_HOST / REDIS_PORT / REDIS_PASSWORD, those always take precedence
+    # and REDIS_URL is rebuilt from them so that an accidentally hardcoded REDIS_URL
+    # env var cannot shadow the linked addon credentials.
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_HOST: str | None = None
     REDIS_PORT: int | None = None
@@ -56,6 +60,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def construct_redis_url(self) -> Settings:
+        """Build REDIS_URL from host/port/password when those are supplied.
+
+        Individual credential vars (injected by Clever Cloud's Redis addon) always
+        win over a pre-set REDIS_URL so that a stale localhost URL in the env can
+        never shadow the real addon connection string.
+        """
         if self.REDIS_HOST:
             port = self.REDIS_PORT or 6379
             password = self.REDIS_PASSWORD or ""
