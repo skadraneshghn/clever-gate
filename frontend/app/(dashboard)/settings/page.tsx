@@ -123,7 +123,7 @@ export default function SettingsPage() {
                 {/* Visual Appearance Mode Selection */}
                 <Stack gap="xs">
                   <Text fw={650} size="sm">Appearance Mode</Text>
-                  <SimpleGrid cols={{ base: 1, sm: 2 }} gap="md">
+                  <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                     {/* Light Mode Card */}
                     <motion.div
                       whileHover={{ y: -2, scale: 1.01 }}
@@ -201,7 +201,7 @@ export default function SettingsPage() {
                 {/* Visual Color Palette Grid */}
                 <Stack gap="xs">
                   <Text fw={650} size="sm">Color Palette</Text>
-                  <SimpleGrid cols={{ base: 2, xs: 3, sm: 4, md: 5 }} gap="md">
+                  <SimpleGrid cols={{ base: 2, xs: 3, sm: 4, md: 5 }} spacing="md">
                     {THEMES.map((theme) => {
                       const isSelected = themeVariant === theme.key;
                       return (
