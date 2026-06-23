@@ -27,8 +27,11 @@ _STREAM_KEY = "cg:logs:stream"
 _CONSUMER_GROUP = "cg-log-consumer"
 _CONSUMER_NAME = f"cg-log-consumer-{os.getpid()}"
 _BATCH_SIZE = 100
-_POLL_TIMEOUT = 5_000  # milliseconds
+# Keep block time short (2 s) so the TCP socket is never idle long enough
+# for managed Redis proxies (Clever Cloud, etc.) to drop it.
+_POLL_TIMEOUT = 2_000  # milliseconds
 _BULK_INSERT_SIZE = 100
+_MAX_RECONNECT_BACKOFF = 30  # seconds
 
 _started = False
 _has_embedding_col: bool | None = None
@@ -59,11 +62,19 @@ async def _ensure_consumer_group(redis: any) -> None:
 
 
 async def _consumer_loop() -> None:
-    """Main consumer loop: read → embed → insert → ack."""
+    """Main consumer loop: read → embed → insert → ack.
+
+    Handles Redis connection drops gracefully by resetting the client and
+    reconnecting with exponential backoff. This is needed for managed Redis
+    addons (Clever Cloud, Heroku, etc.) that terminate idle connections.
+    """
+    from app.core.pooling import close_redis
+
     redis = await get_redis()
     await _ensure_consumer_group(redis)
 
     buffer: list[tuple[str, dict]] = []  # (msg_id, event)
+    backoff = 1  # seconds, for reconnect attempts
 
     while True:
         try:
@@ -74,6 +85,8 @@ async def _consumer_loop() -> None:
                 count=_BATCH_SIZE,
                 block=_POLL_TIMEOUT,
             )
+
+            backoff = 1  # reset on success
 
             if not response:
                 if buffer:
@@ -100,10 +113,26 @@ async def _consumer_loop() -> None:
             if buffer:
                 await _flush_buffer(redis, buffer)
             raise
+        except (TimeoutError, ConnectionError, OSError) as exc:
+            # Network-level connection drop — reset the client and reconnect
+            print(
+                f"[log_consumer] connection lost ({type(exc).__name__}): {exc} — "
+                f"reconnecting in {backoff}s",
+                flush=True,
+            )
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, _MAX_RECONNECT_BACKOFF)
+            try:
+                await close_redis()
+            except Exception:
+                pass
+            redis = await get_redis()
+            await _ensure_consumer_group(redis)
         except Exception as exc:
             # Use print, not logger, to avoid feedback loop
             print(f"[log_consumer] error: {exc}", flush=True)
-            await asyncio.sleep(2)
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, _MAX_RECONNECT_BACKOFF)
 
 
 async def _flush_buffer(redis: any, entries: list[tuple[str, dict]]) -> None:

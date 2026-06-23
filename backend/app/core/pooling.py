@@ -15,7 +15,26 @@ async def get_redis() -> aioredis.Redis:
     if _redis is None:
         settings = get_settings()
         _redis = aioredis.from_url(
-            settings.REDIS_URL, decode_responses=True, max_connections=50
+            settings.REDIS_URL,
+            decode_responses=True,
+            max_connections=50,
+            # Keep TCP connections alive so managed Redis proxies
+            # (Clever Cloud, Heroku, etc.) don't drop idle blocking sockets.
+            socket_keepalive=True,
+            socket_keepalive_options={
+                # Seconds before sending the first keepalive probe
+                "TCP_KEEPIDLE": 30,
+                # Seconds between subsequent keepalive probes
+                "TCP_KEEPINTVL": 10,
+                # Number of failed probes before declaring dead
+                "TCP_KEEPCNT": 3,
+            },
+            # redis-py periodically pings the connection to detect stale sockets
+            health_check_interval=30,
+            # Surface connection errors quickly rather than hanging
+            socket_connect_timeout=5,
+            socket_timeout=10,
+            retry_on_timeout=True,
         )
     return _redis
 
