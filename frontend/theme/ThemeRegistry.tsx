@@ -9,7 +9,22 @@ import { NavigationProgress } from "@mantine/nprogress";
 import { getTheme } from "./theme";
 
 type ColorScheme = "light" | "dark";
-type ThemeVariant = "ocean" | "forest";
+type ThemeVariant =
+  | "ocean"
+  | "forest"
+  | "warm"
+  | "sage"
+  | "lavender"
+  | "teal"
+  | "sunset"
+  | "olive"
+  | "cyberpunk"
+  | "earth"
+  | "cherry"
+  | "mint"
+  | "vibrant"
+  | "noir"
+  | "aqua";
 
 interface ColorSchemeContextValue {
   colorScheme: ColorScheme;
