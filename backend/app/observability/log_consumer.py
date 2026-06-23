@@ -1,18 +1,24 @@
 """Background consumer: Redis Stream → embedding → PostgreSQL bulk insert.
 
-Runs as an asyncio task in the application lifespan.  Reads log events from
-the Redis Stream in batches, generates vector embeddings via the
-ProcessPool, and performs bulk inserts into the ``system_logs`` table.
+Reads log events from the Redis Stream in batches, generates vector
+embeddings via the ProcessPool, and performs bulk inserts into the
+``system_logs`` table.
+
+If the pgvector extension is not available, embeddings are silently
+skipped — the system still stores and queries logs, just without
+semantic search.
 """
 
 from __future__ import annotations
 
 import asyncio
 import orjson
+import uuid as uuid_mod
 from datetime import datetime, timezone
 
+from sqlalchemy import text
+
 from app.core.pooling import get_redis
-from app.db.models.system_log import SystemLog
 from app.db.session import db_context
 from app.observability.embedding import embed_text
 from app.observability.logging import get_logger
@@ -27,6 +33,22 @@ _POLL_TIMEOUT = 5_000  # milliseconds
 _BULK_INSERT_SIZE = 100
 
 _started = False
+_has_embedding_col: bool | None = None
+
+
+async def _check_embedding_column(db: any) -> bool:
+    """Check (once) whether the embedding column exists on system_logs."""
+    global _has_embedding_col
+    if _has_embedding_col is not None:
+        return _has_embedding_col
+    result = await db.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'system_logs' AND column_name = 'embedding'"
+        )
+    )
+    _has_embedding_col = result.scalar() is not None
+    return _has_embedding_col
 
 
 async def _ensure_consumer_group(redis: any) -> None:
@@ -90,43 +112,105 @@ async def _flush_buffer(events: list[dict]) -> None:
     if not events:
         return
 
-    texts = [f"{e.get('message', '')} {e.get('logger_name', '')}" for e in events]
+    async with db_context() as session:
+        use_embedding = await _check_embedding_column(session)
 
-    try:
-        loop = asyncio.get_running_loop()
-        embeddings = await loop.run_in_executor(None, _embed_batch, texts)
-    except Exception as exc:
-        logger.warning("log_consumer.embedding_failed", error=str(exc))
-        embeddings = [None] * len(events)
+        if use_embedding:
+            texts = [
+                f"{e.get('message', '')} {e.get('logger_name', '')}" for e in events
+            ]
+            try:
+                loop = asyncio.get_running_loop()
+                embeddings = await loop.run_in_executor(None, _embed_batch, texts)
+            except Exception as exc:
+                logger.warning("log_consumer.embedding_failed", error=str(exc))
+                embeddings = [None] * len(events)
 
-    rows = []
-    for event, emb in zip(events, embeddings, strict=False):
-        try:
-            ts_str = event.get("timestamp")
-            if isinstance(ts_str, str):
-                timestamp = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-            else:
-                timestamp = datetime.now(timezone.utc)
-        except Exception:
-            timestamp = datetime.now(timezone.utc)
+            for event, emb in zip(events, embeddings, strict=False):
+                await _insert_with_embedding(session, event, emb)
+        else:
+            for event in events:
+                await _insert_without_embedding(session, event)
 
-        rows.append(
-            SystemLog(
-                timestamp=timestamp,
-                level=event.get("level", "INFO"),
-                logger_name=event.get("logger_name", "unknown"),
-                message=event.get("message", ""),
-                context=event.get("context", {}),
-                embedding=emb,
-            )
+        await session.commit()
+
+
+async def _insert_with_embedding(
+    session: any, event: dict, emb: list[float] | None
+) -> None:
+    """Insert a single log row with embedding via raw SQL."""
+    ts = _parse_timestamp(event)
+    log_id = str(uuid_mod.uuid4())
+    ctx = orjson.dumps(event.get("context", {})).decode()
+
+    if emb is not None:
+        emb_str = "[" + ",".join(str(v) for v in emb) + "]"
+        await session.execute(
+            text(
+                "INSERT INTO system_logs "
+                "(id, timestamp, level, logger_name, message, context, embedding) "
+                "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb, :emb::vector)"
+            ),
+            {
+                "id": log_id,
+                "ts": ts,
+                "lvl": event.get("level", "INFO"),
+                "ln": event.get("logger_name", "unknown"),
+                "msg": event.get("message", ""),
+                "ctx": ctx,
+                "emb": emb_str,
+            },
+        )
+    else:
+        await session.execute(
+            text(
+                "INSERT INTO system_logs "
+                "(id, timestamp, level, logger_name, message, context) "
+                "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb)"
+            ),
+            {
+                "id": log_id,
+                "ts": ts,
+                "lvl": event.get("level", "INFO"),
+                "ln": event.get("logger_name", "unknown"),
+                "msg": event.get("message", ""),
+                "ctx": ctx,
+            },
         )
 
-    try:
-        async with db_context() as session:
-            session.add_all(rows)
-            await session.commit()
-    except Exception as exc:
-        logger.warning("log_consumer.insert_failed", error=str(exc), count=len(rows))
+
+async def _insert_without_embedding(session: any, event: dict) -> None:
+    """Insert a single log row without embedding."""
+    ts = _parse_timestamp(event)
+    log_id = str(uuid_mod.uuid4())
+    ctx = orjson.dumps(event.get("context", {})).decode()
+
+    await session.execute(
+        text(
+            "INSERT INTO system_logs "
+            "(id, timestamp, level, logger_name, message, context) "
+            "VALUES (:id, :ts, :lvl, :ln, :msg, :ctx::jsonb)"
+        ),
+        {
+            "id": log_id,
+            "ts": ts,
+            "lvl": event.get("level", "INFO"),
+            "ln": event.get("logger_name", "unknown"),
+            "msg": event.get("message", ""),
+            "ctx": ctx,
+        },
+    )
+
+
+def _parse_timestamp(event: dict) -> datetime:
+    """Parse the timestamp from a log event."""
+    ts_str = event.get("timestamp")
+    if isinstance(ts_str, str):
+        try:
+            return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    return datetime.now(timezone.utc)
 
 
 def _embed_batch(texts: list[str]) -> list[list[float] | None]:

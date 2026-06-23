@@ -9,12 +9,11 @@ from datetime import datetime, timezone
 import orjson
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import paginated
 from app.auth.dependencies import get_current_admin_user
-from app.core.concurrency import run_in_process
 from app.db.models.system_log import SystemLog
 from app.db.models.user import User
 from app.db.session import db_context, get_db
@@ -69,7 +68,9 @@ async def list_logs(
 
     if request_id:
         stmt = stmt.where(SystemLog.context["request_id"].astext == request_id)
-        count_stmt = count_stmt.where(SystemLog.context["request_id"].astext == request_id)
+        count_stmt = count_stmt.where(
+            SystemLog.context["request_id"].astext == request_id
+        )
 
     if user_id:
         stmt = stmt.where(SystemLog.context["user_id"].astext == user_id)
@@ -98,21 +99,53 @@ async def semantic_search_logs(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
-    """Semantic similarity search over log messages using pgvector."""
-    query_vec = await run_in_process(embed_text, q)
+    """Semantic similarity search over log messages using pgvector.
 
-    stmt = select(SystemLog).where(SystemLog.embedding.isnot(None))
+    Falls back to text search if the pgvector extension or embedding column
+    is not available.
+    """
+    has_emb = await _has_embedding_column(db)
+
+    if has_emb:
+        try:
+            loop = asyncio.get_running_loop()
+            query_vec = await loop.run_in_executor(None, embed_text, q)
+            emb_str = "[" + ",".join(str(v) for v in query_vec) + "]"
+
+            sql = (
+                "SELECT id, timestamp, level, logger_name, message, context "
+                "FROM system_logs WHERE embedding IS NOT NULL"
+            )
+            params: dict = {"emb": emb_str, "limit": limit}
+            if level and level.upper() in _VALID_LEVELS:
+                sql += " AND level = :lvl"
+                params["lvl"] = level.upper()
+            sql += " ORDER BY embedding <=> :emb::vector LIMIT :limit"
+
+            result = await db.execute(text(sql), params)
+            rows = result.mappings().all()
+            items = [
+                {
+                    "id": str(r["id"]),
+                    "timestamp": r["timestamp"].isoformat() if r["timestamp"] else "",
+                    "level": r["level"],
+                    "logger_name": r["logger_name"],
+                    "message": r["message"],
+                    "context": r["context"] or {},
+                }
+                for r in rows
+            ]
+            return {"items": items, "query": q, "mode": "semantic"}
+        except Exception as exc:
+            logger.warning("logs.semantic_search_failed", error=str(exc))
+
+    # Fallback: text search
+    stmt = select(SystemLog).where(SystemLog.message.ilike(f"%{q}%"))
     if level and level.upper() in _VALID_LEVELS:
         stmt = stmt.where(SystemLog.level == level.upper())
-
-    stmt = stmt.order_by(SystemLog.embedding.cosine_distance(query_vec)).limit(limit)
-    result = await db.execute(stmt)
-    items = result.scalars().all()
-
-    return {
-        "items": [SystemLogResponse.model_validate(log).model_dump() for log in items],
-        "query": q,
-    }
+    result = await db.execute(stmt.order_by(desc(SystemLog.timestamp)).limit(limit))
+    items = [SystemLogResponse.model_validate(log).model_dump() for log in result.scalars().all()]
+    return {"items": items, "query": q, "mode": "text"}
 
 
 @router.get("/logs/export")
@@ -169,6 +202,17 @@ async def export_logs(
         media_type="text/plain",
         headers={"Content-Disposition": content_disposition},
     )
+
+
+async def _has_embedding_column(db: AsyncSession) -> bool:
+    """Check whether the embedding column exists on system_logs."""
+    result = await db.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'system_logs' AND column_name = 'embedding'"
+        )
+    )
+    return result.scalar() is not None
 
 
 def _format_log_line(log: SystemLog) -> str:

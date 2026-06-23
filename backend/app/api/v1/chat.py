@@ -86,8 +86,6 @@ async def _stream(engine: CoreEngine, body: ChatCompletionRequest):
         async for chunk in engine.stream_chat_completion(body):
             yield chunk
     except RuntimeError as exc:
-        import json
-
         error_data = orjson.dumps(
             {"error": {"message": str(exc), "type": "api_error"}}
         ).decode("utf-8")
