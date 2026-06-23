@@ -14,6 +14,7 @@ const titleMap: Record<string, string> = {
   "/keys": "Virtual Keys",
   "/spend": "Spend & Cost",
   "/monitoring": "Monitoring / Audit",
+  "/logs": "System Logs",
   "/cache": "Cache Management",
   "/settings": "Settings",
 };

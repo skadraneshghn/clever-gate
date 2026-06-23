@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.admin import auth, dashboard, keys, providers, users
+from app.api.admin import auth, dashboard, keys, logs, providers, users, ws
 
 router = APIRouter(prefix="/api/admin")
 router.include_router(auth.router, prefix="/auth", tags=["admin-auth"])
@@ -12,5 +12,7 @@ router.include_router(providers.router, tags=["admin-providers"])
 router.include_router(users.router, tags=["admin-users"])
 router.include_router(keys.router, tags=["admin-keys"])
 router.include_router(dashboard.router, tags=["admin-dashboard"])
+router.include_router(logs.router, tags=["admin-logs"])
+router.include_router(ws.router, tags=["admin-logs-ws"])
 
 __all__ = ["router"]

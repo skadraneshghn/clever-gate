@@ -8,6 +8,7 @@ from app.db.models.provider import (
     ProviderKey,
     RoutingRule,
 )
+from app.db.models.system_log import SystemLog
 from app.db.models.tracking import (
     AuditLog,
     Budget,
@@ -35,6 +36,7 @@ __all__ = [
     "RoutingRule",
     "Setting",
     "SpendRecord",
+    "SystemLog",
     "Team",
     "User",
     "UserTeam",

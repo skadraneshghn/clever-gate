@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     CG_ENV: Literal["development", "production", "test"] = "development"
     CG_HTTP_PORT: int = 8080
     CG_LOG_LEVEL: str = "INFO"
+    CG_THIRD_PARTY_LOG_LEVEL: str = "WARNING"
 
     # Master key
     CG_MASTER_KEY: str = "sk-cg-master-change-me"

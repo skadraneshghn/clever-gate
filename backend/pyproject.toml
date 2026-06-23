@@ -26,6 +26,7 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0.0",
     "prometheus-client>=0.21.0",
     "tenacity>=9.0.0",
+    "pgvector>=0.3.0",
     "uvloop>=0.21.0; sys_platform != 'win32'",
     "httptools>=0.6.0",
     "pyjwt>=2.10.0",

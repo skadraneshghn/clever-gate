@@ -12,6 +12,7 @@ import {
   FiDatabase,
   FiSettings,
   FiZap,
+  FiTerminal,
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/keys", label: "Virtual Keys", icon: <FiKey size={18} />, color: "#d97706" },     // Amber
   { href: "/spend", label: "Spend & Cost", icon: <FiDollarSign size={18} />, color: "#16a34a" }, // Green
   { href: "/monitoring", label: "Monitoring", icon: <FiActivity size={18} />, color: "#0891b2" }, // Cyan
+  { href: "/logs", label: "System Logs", icon: <FiTerminal size={18} />, color: "#2563eb" }, // Blue
   { href: "/cache", label: "Cache", icon: <FiDatabase size={18} />, color: "#7c3aed" },       // Violet
   { href: "/settings", label: "Settings", icon: <FiSettings size={18} />, color: "#6b7280" },   // Gray
 ];

@@ -156,3 +156,12 @@ export interface ApiError {
   type?: string;
   code?: string;
 }
+
+export interface SystemLog {
+  id: string;
+  timestamp: string;
+  level: string;
+  logger_name: string;
+  message: string;
+  context: Record<string, unknown>;
+}

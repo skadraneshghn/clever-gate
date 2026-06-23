@@ -55,9 +55,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.warning("startup.admin_seed_skipped", error=str(exc))
 
+    # Start non-blocking log pipeline (queue → Redis Stream + Pub/Sub)
+    from app.observability.log_pipeline import start_log_transport
+
+    start_log_transport()
+    logger.info("startup.log_transport_started")
+
+    # Start background consumer (Redis Stream → embedding → PostgreSQL)
+    from app.observability.log_consumer import start_log_consumer
+
+    log_consumer_task = start_log_consumer()
+    logger.info("startup.log_consumer_started")
+
     yield
 
     logger.info("shutdown.begin")
+
+    # Stop log pipeline
+    from app.observability.log_pipeline import stop_log_transport
+
+    log_consumer_task.cancel()
+    try:
+        await log_consumer_task
+    except Exception:
+        pass
+    await stop_log_transport()
+    logger.info("shutdown.log_pipeline_stopped")
+
     await close_redis()
     await close_http_clients()
     await dispose_engine()

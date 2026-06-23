@@ -274,3 +274,19 @@ class PaginatedResponse[T](BaseModel):
 
     items: list[T]
     pagination: PaginationMeta
+
+
+# --------------------------------------------------------------------------- #
+# System logs
+# --------------------------------------------------------------------------- #
+class SystemLogResponse(BaseModel):
+    """A single system log event."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    timestamp: datetime
+    level: str
+    logger_name: str
+    message: str
+    context: dict[str, Any] = Field(default_factory=dict)
