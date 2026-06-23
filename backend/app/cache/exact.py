@@ -8,6 +8,9 @@ from typing import Any
 import orjson
 
 from app.core.pooling import get_redis
+from app.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 _CACHE_PREFIX = "cg:cache:"
 _STREAM_SUFFIX = ":stream"
@@ -41,11 +44,15 @@ def cache_key(model: str, messages: list[Any], params: dict[str, Any]) -> str:
 
 async def get(cache_key: str) -> dict[str, Any] | None:
     """Return the cached response dict, or None on miss."""
-    redis = await get_redis()
-    raw = await redis.get(cache_key)
-    if raw is None:
+    try:
+        redis = await get_redis()
+        raw = await redis.get(cache_key)
+        if raw is None:
+            return None
+        return orjson.loads(raw)
+    except Exception as exc:
+        logger.warning("cache.get_failed", error=str(exc), key=cache_key)
         return None
-    return orjson.loads(raw)
 
 
 async def set(
@@ -54,24 +61,31 @@ async def set(
     ttl: int = 3600,
 ) -> None:
     """Store a response dict with a TTL and index it by model for invalidation."""
-    redis = await get_redis()
-    pipe = redis.pipeline()
-    pipe.setex(cache_key, ttl, orjson.dumps(value))
-    model = value.get("model") if isinstance(value, dict) else None
-    if model:
-        idx_key = f"{_MODEL_INDEX_PREFIX}{model}"
-        pipe.sadd(idx_key, cache_key)
-        pipe.expire(idx_key, ttl)
-    await pipe.execute()
+    try:
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        pipe.setex(cache_key, ttl, orjson.dumps(value))
+        model = value.get("model") if isinstance(value, dict) else None
+        if model:
+            idx_key = f"{_MODEL_INDEX_PREFIX}{model}"
+            pipe.sadd(idx_key, cache_key)
+            pipe.expire(idx_key, ttl)
+        await pipe.execute()
+    except Exception as exc:
+        logger.warning("cache.set_failed", error=str(exc), key=cache_key)
 
 
 async def get_stream(cache_key: str) -> list[str] | None:
     """Return cached SSE chunks for a key, or None on miss."""
-    redis = await get_redis()
-    raw = await redis.get(f"{cache_key}{_STREAM_SUFFIX}")
-    if raw is None:
+    try:
+        redis = await get_redis()
+        raw = await redis.get(f"{cache_key}{_STREAM_SUFFIX}")
+        if raw is None:
+            return None
+        return orjson.loads(raw)
+    except Exception as exc:
+        logger.warning("cache.get_stream_failed", error=str(exc), key=cache_key)
         return None
-    return orjson.loads(raw)
 
 
 async def set_stream(
@@ -80,11 +94,14 @@ async def set_stream(
     ttl: int = 3600,
 ) -> None:
     """Store cached SSE chunks for a key with a TTL."""
-    redis = await get_redis()
-    pipe = redis.pipeline()
-    stream_key = f"{cache_key}{_STREAM_SUFFIX}"
-    pipe.setex(stream_key, ttl, orjson.dumps(chunks))
-    await pipe.execute()
+    try:
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        stream_key = f"{cache_key}{_STREAM_SUFFIX}"
+        pipe.setex(stream_key, ttl, orjson.dumps(chunks))
+        await pipe.execute()
+    except Exception as exc:
+        logger.warning("cache.set_stream_failed", error=str(exc), key=cache_key)
 
 
 async def invalidate(pattern: str = "cg:cache:*") -> int:
@@ -92,12 +109,16 @@ async def invalidate(pattern: str = "cg:cache:*") -> int:
 
     Returns the number of keys deleted.
     """
-    redis = await get_redis()
-    count = 0
-    async for key in redis.scan_iter(match=pattern, count=100):
-        await redis.delete(key)
-        count += 1
-    return count
+    try:
+        redis = await get_redis()
+        count = 0
+        async for key in redis.scan_iter(match=pattern, count=100):
+            await redis.delete(key)
+            count += 1
+        return count
+    except Exception as exc:
+        logger.warning("cache.invalidate_failed", error=str(exc), pattern=pattern)
+        return 0
 
 
 async def invalidate_by_model(model: str) -> int:
@@ -106,15 +127,19 @@ async def invalidate_by_model(model: str) -> int:
     Uses a per-model set index maintained by :func:`set` to avoid scanning the
     entire keyspace. Returns the number of entries removed.
     """
-    redis = await get_redis()
-    idx_key = f"{_MODEL_INDEX_PREFIX}{model}"
-    keys = await redis.smembers(idx_key)
-    if not keys:
+    try:
+        redis = await get_redis()
+        idx_key = f"{_MODEL_INDEX_PREFIX}{model}"
+        keys = await redis.smembers(idx_key)
+        if not keys:
+            return 0
+        pipe = redis.pipeline()
+        for key in keys:
+            pipe.delete(key)
+            pipe.delete(f"{key}{_STREAM_SUFFIX}")
+        pipe.delete(idx_key)
+        await pipe.execute()
+        return len(keys)
+    except Exception as exc:
+        logger.warning("cache.invalidate_by_model_failed", error=str(exc), model=model)
         return 0
-    pipe = redis.pipeline()
-    for key in keys:
-        pipe.delete(key)
-        pipe.delete(f"{key}{_STREAM_SUFFIX}")
-    pipe.delete(idx_key)
-    await pipe.execute()
-    return len(keys)

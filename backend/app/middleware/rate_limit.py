@@ -10,9 +10,12 @@ from starlette.responses import JSONResponse
 
 from app.auth.api_key import hash_api_key
 from app.core.pooling import get_redis
+from app.observability.logging import get_logger
 
 if TYPE_CHECKING:
     from starlette.requests import Request
+
+logger = get_logger(__name__)
 
 _WINDOW_KEY = "cg:ratelimit:{key}"
 
@@ -72,11 +75,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         api_key = self._extract_api_key(request)
         if api_key is not None:
             key_hash = hash_api_key(api_key)
-            allowed, remaining = await check_rate_limit(
-                f"apikey:{key_hash}",
-                self.limit,
-                self.window_seconds,
-            )
+            try:
+                allowed, remaining = await check_rate_limit(
+                    f"apikey:{key_hash}",
+                    self.limit,
+                    self.window_seconds,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "rate_limit.redis_error",
+                    error=str(exc),
+                    key_hash=key_hash,
+                )
+                allowed, remaining = True, self.limit
+
             if not allowed:
                 return JSONResponse(
                     status_code=429,

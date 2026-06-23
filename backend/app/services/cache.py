@@ -18,12 +18,17 @@ async def invalidate_model(model: str) -> int:
 async def stats() -> dict[str, int]:
     """Return basic cache statistics (key counts)."""
     from app.core.pooling import get_redis
+    from app.observability.logging import get_logger
 
-    redis = await get_redis()
-    total = 0
-    async for _ in redis.scan_iter(match="cg:cache:*", count=200):
-        total += 1
-    return {"total_entries": total}
+    try:
+        redis = await get_redis()
+        total = 0
+        async for _ in redis.scan_iter(match="cg:cache:*", count=200):
+            total += 1
+        return {"total_entries": total}
+    except Exception as exc:
+        get_logger(__name__).warning("cache.stats_failed", error=str(exc))
+        return {"total_entries": 0}
 
 
 __all__ = ["invalidate_all", "invalidate_model", "stats"]

@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # Process management & reverse proxy
         supervisor \
         nginx \
+        redis-server \
         # Signal handling for PID 1
         tini \
     && apt-get clean \
