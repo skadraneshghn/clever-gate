@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import orjson
+import os
 import uuid as uuid_mod
 from datetime import datetime, timezone
 
@@ -27,7 +28,7 @@ logger = get_logger(__name__)
 
 _STREAM_KEY = "cg:logs:stream"
 _CONSUMER_GROUP = "cg-log-consumer"
-_CONSUMER_NAME = "cg-log-consumer-1"
+_CONSUMER_NAME = f"cg-log-consumer-{os.getpid()}"
 _BATCH_SIZE = 100
 _POLL_TIMEOUT = 5_000  # milliseconds
 _BULK_INSERT_SIZE = 100

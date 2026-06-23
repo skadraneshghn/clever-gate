@@ -196,7 +196,7 @@ async def _flush_batch(redis: Any, batch: list[bytes]) -> None:
 
 def start_log_transport(loop: asyncio.AbstractEventLoop | None = None) -> None:
     """Start the background transport task (idempotent, thread-safe)."""
-    global _transport_task
+    global _transport_task, _started
 
     with _started_lock:
         if _started:
