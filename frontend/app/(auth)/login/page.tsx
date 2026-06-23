@@ -16,10 +16,12 @@ import {
   Center,
   Box,
   Group,
+  ActionIcon,
 } from "@mantine/core";
 import { motion } from "framer-motion";
-import { FiZap, FiAlertCircle, FiUser, FiLock, FiShield, FiLogIn } from "react-icons/fi";
+import { FiZap, FiAlertCircle, FiUser, FiLock, FiShield, FiLogIn, FiSun, FiMoon } from "react-icons/fi";
 import { useAuth } from "../../../lib/auth";
+import { useColorScheme } from "../../../theme/ThemeRegistry";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 30 },
@@ -46,6 +48,7 @@ const itemVariants = {
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { colorScheme, toggleColorScheme } = useColorScheme();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -69,6 +72,28 @@ export default function LoginPage() {
 
   return (
     <Center mih="100vh" p="md" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Floating Theme Toggle */}
+      <Box style={{ position: "absolute", top: 20, right: 20, zIndex: 10 }}>
+        <motion.div
+          whileHover={{ rotate: 180, scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 200, damping: 10 }}
+        >
+          <ActionIcon
+            onClick={toggleColorScheme}
+            variant="subtle"
+            size="lg"
+            radius="md"
+            aria-label="Toggle color scheme"
+          >
+            {colorScheme === "dark" ? (
+              <FiSun size={20} style={{ color: "#eab308" }} />
+            ) : (
+              <FiMoon size={20} style={{ color: "#6366f1" }} />
+            )}
+          </ActionIcon>
+        </motion.div>
+      </Box>
       {/* Decorative Floating Glowing Backdrops */}
       <motion.div
         animate={{
@@ -186,7 +211,9 @@ export default function LoginPage() {
               withBorder
               style={{
                 boxShadow: "0 12px 40px rgba(0, 0, 0, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                backgroundColor: colorScheme === "dark" ? "rgba(20, 24, 38, 0.35)" : "rgba(255, 255, 255, 0.35)",
+                backdropFilter: "blur(16px)",
+                border: colorScheme === "dark" ? "1px solid rgba(255, 255, 255, 0.04)" : "1px solid rgba(0, 0, 0, 0.06)",
               }}
             >
               {error && (
