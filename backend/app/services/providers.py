@@ -136,15 +136,17 @@ async def delete_deployment(db: AsyncSession, deployment: Deployment) -> None:
 # Provider keys
 # --------------------------------------------------------------------------- #
 async def list_provider_keys(
-    db: AsyncSession, *, provider_id: uuid.UUID, page: int = 1, page_size: int = 50
+    db: AsyncSession, *, provider_id: uuid.UUID | None = None, page: int = 1, page_size: int = 50
 ) -> tuple[list[ProviderKey], int]:
-    total = await db.scalar(
-        select(func.count()).select_from(ProviderKey).where(ProviderKey.provider_id == provider_id)
-    )
+    count_stmt = select(func.count()).select_from(ProviderKey)
+    list_stmt = select(ProviderKey)
+    if provider_id is not None:
+        count_stmt = count_stmt.where(ProviderKey.provider_id == provider_id)
+        list_stmt = list_stmt.where(ProviderKey.provider_id == provider_id)
+    total = await db.scalar(count_stmt)
     offset = (page - 1) * page_size
     result = await db.execute(
-        select(ProviderKey)
-        .where(ProviderKey.provider_id == provider_id)
+        list_stmt
         .order_by(ProviderKey.created_at.desc())
         .offset(offset)
         .limit(page_size)

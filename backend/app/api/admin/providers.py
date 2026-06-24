@@ -357,7 +357,7 @@ async def delete_deployment(
 # --------------------------------------------------------------------------- #
 @router.get("/provider-keys", response_model=None)
 async def list_provider_keys(
-    provider_id: uuid.UUID,
+    provider_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 50,
     db: AsyncSession = Depends(get_db),
