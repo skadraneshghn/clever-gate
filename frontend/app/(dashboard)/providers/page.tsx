@@ -170,14 +170,32 @@ export default function ProvidersPage() {
   };
 
   // Clone handlers — open the create drawer pre-filled with a copy
+  // Naming: "<base> - N" where N is the next available counter
   const handleCloneProvider = (p: Provider) => {
-    setCloneProvider({ ...p, name: `Copy of ${p.name}` });
+    // Strip any existing " - N" suffix to get the canonical base name
+    const base = p.name.replace(/ - \d+$/, "");
+    const taken = new Set(
+      providers
+        .map((x) => { const m = x.name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} - (\\d+)$`)); return m ? parseInt(m[1], 10) : null; })
+        .filter((n): n is number => n !== null)
+    );
+    let counter = 1;
+    while (taken.has(counter)) counter++;
+    setCloneProvider({ ...p, name: `${base} - ${counter}` });
     setEditing(null);
     setDrawerOpen(true);
   };
 
   const handleCloneDeployment = (d: Deployment) => {
-    setCloneDeployment({ ...d, model_name: `Copy of ${d.model_name}` });
+    const base = d.model_name.replace(/ - \d+$/, "");
+    const taken = new Set(
+      deployments
+        .map((x) => { const m = x.model_name.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} - (\\d+)$`)); return m ? parseInt(m[1], 10) : null; })
+        .filter((n): n is number => n !== null)
+    );
+    let counter = 1;
+    while (taken.has(counter)) counter++;
+    setCloneDeployment({ ...d, model_name: `${base} - ${counter}` });
     setEditing(null);
     setDrawerOpen(true);
   };
