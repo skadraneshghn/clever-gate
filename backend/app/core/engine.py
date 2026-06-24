@@ -165,6 +165,12 @@ class CoreEngine:
         On a cache hit the stored chunks are replayed. Otherwise the upstream
         stream is passed through a non-blocking buffer while chunks are
         collected for cache filling.
+
+        Each raw chunk from the upstream provider is normalized into a strict
+        OpenAI-compliant structure before being yielded. This guards against
+        provider-specific deviations (e.g. Cloudflare/GLM empty choices arrays,
+        missing delta keys, non-standard tool_call shapes) that would otherwise
+        crash clients such as Cline.
         """
         import orjson
 
@@ -204,18 +210,76 @@ class CoreEngine:
         start = time.perf_counter()
         total_completion_tokens = 0
 
-        async for chunk_dict in adapter.stream_chat(
+        # Process the upstream token stream with active normalization
+        async for raw_chunk in adapter.stream_chat(
             deployment, request, router=router
         ):
+            # 1. Coerce the chunk object into a standard mutable dictionary
+            if not isinstance(raw_chunk, dict):
+                if hasattr(raw_chunk, "model_dump"):
+                    chunk_dict = raw_chunk.model_dump()
+                elif hasattr(raw_chunk, "to_dict"):
+                    chunk_dict = raw_chunk.to_dict()
+                else:
+                    chunk_dict = dict(raw_chunk)
+            else:
+                chunk_dict = raw_chunk
+
+            # 2. Enforce Strict OpenAI Top-Level Envelope Contracts
+            chunk_dict.setdefault("id", f"chatcmpl-{self.request_id}")
+            chunk_dict.setdefault("object", "chat.completion.chunk")
+            chunk_dict.setdefault("created", int(time.time()))
+            chunk_dict.setdefault("model", model)
+
+            # 3. Rectify Choices Array Structure to Protect Cline from Parsing Violations
+            choices = chunk_dict.get("choices")
+            if choices is None or not isinstance(choices, list) or len(choices) == 0:
+                # If Cloudflare passes an empty usage/metadata chunk, Cline will crash.
+                # Inject a standard zero-indexed structure to safely bypass client drops.
+                chunk_dict["choices"] = [{
+                    "index": 0,
+                    "delta": {"content": ""},
+                    "finish_reason": None
+                }]
+            else:
+                # Sanitize every active array item to ensure schema validation passes
+                for choice in chunk_dict["choices"]:
+                    if not isinstance(choice, dict):
+                        continue
+                    choice.setdefault("index", 0)
+                    choice.setdefault("finish_reason", None)
+
+                    delta = choice.get("delta")
+                    if delta is None or not isinstance(delta, dict):
+                        choice["delta"] = {"content": ""}
+                    else:
+                        # Ensure content string keys exist
+                        if "content" not in delta and "tool_calls" not in delta:
+                            delta["content"] = ""
+
+                        # Fix nested Tool Calling structures for GLM/Cloudflare chunks
+                        if "tool_calls" in delta and isinstance(delta["tool_calls"], list):
+                            for idx, tc in enumerate(delta["tool_calls"]):
+                                if isinstance(tc, dict):
+                                    tc.setdefault("index", idx)
+                                    if "type" not in tc:
+                                        tc["type"] = "function"
+                                    if "function" in tc and isinstance(tc["function"], dict):
+                                        tc["function"].setdefault("name", "")
+                                        tc["function"].setdefault("arguments", "")
+
+            # 4. Serialize the normalized payload back to compliant SSE
             data = orjson.dumps(chunk_dict).decode("utf-8")
             sse = format_sse(data)
             collected.append(sse)
             yield sse
 
-            choices = chunk_dict.get("choices") or []
-            if choices:
-                delta = choices[0].get("usage") or {}
-                total_completion_tokens += delta.get("completion_tokens", 0)
+            # Safe metrics checking against the clean structure
+            choices_list = chunk_dict.get("choices") or []
+            if choices_list and isinstance(choices_list[0], dict):
+                delta_obj = choices_list[0].get("delta") or {}
+                if isinstance(delta_obj, dict):
+                    total_completion_tokens += delta_obj.get("completion_tokens", 0)
 
         yield format_sse_done()
 
