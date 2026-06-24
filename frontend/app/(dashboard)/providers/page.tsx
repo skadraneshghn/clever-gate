@@ -126,22 +126,30 @@ export default function ProvidersPage() {
 
   const loadKeys = useCallback(async () => {
     try {
+      // Fetch all keys — no provider_id filter so keys are never hidden
+      // when the providers list hasn't been loaded yet.
       const res = await api.get<Paginated<ProviderKey>>(
-        `/api/admin/provider-keys?provider_id=${providers[0]?.id ?? ""}&page=1&page_size=200`,
+        "/api/admin/provider-keys?page=1&page_size=200",
       );
       setKeys(res.items);
     } catch {
       /* ignore */
     }
-  }, [providers]);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
     setError("");
     (async () => {
-      if (tab === "providers") await loadProviders();
-      else if (tab === "deployments") await loadDeployments();
-      else await loadKeys();
+      if (tab === "providers") {
+        await loadProviders();
+      } else if (tab === "deployments") {
+        // providers needed for the drawer selector
+        await Promise.all([loadDeployments(), loadProviders()]);
+      } else {
+        // keys tab: providers needed for the drawer selector
+        await Promise.all([loadKeys(), loadProviders()]);
+      }
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
