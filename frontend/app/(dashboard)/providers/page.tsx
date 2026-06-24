@@ -41,6 +41,7 @@ import {
   AnimatedDollarSign,
   AnimatedCoins,
   AnimatedCpu,
+  AnimatedCopy,
 } from "../../../components/cg/AnimatedIcons";
 import {
   CgTable,
@@ -101,6 +102,9 @@ export default function ProvidersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Provider | Deployment | null>(null);
   const [infoTarget, setInfoTarget] = useState<Provider | null>(null);
+  // Clone state: holds a pre-filled "template" opened as a new item (editing=null)
+  const [cloneProvider, setCloneProvider] = useState<Provider | null>(null);
+  const [cloneDeployment, setCloneDeployment] = useState<Deployment | null>(null);
 
   const loadProviders = useCallback(async () => {
     try {
@@ -165,6 +169,19 @@ export default function ProvidersPage() {
     });
   };
 
+  // Clone handlers — open the create drawer pre-filled with a copy
+  const handleCloneProvider = (p: Provider) => {
+    setCloneProvider({ ...p, name: `Copy of ${p.name}` });
+    setEditing(null);
+    setDrawerOpen(true);
+  };
+
+  const handleCloneDeployment = (d: Deployment) => {
+    setCloneDeployment({ ...d, model_name: `Copy of ${d.model_name}` });
+    setEditing(null);
+    setDrawerOpen(true);
+  };
+
   const handleTest = async (id: string) => {
     try {
       const res = await api.post<{ healthy: boolean }>(`/api/admin/providers/${id}/test`);
@@ -200,6 +217,11 @@ export default function ProvidersPage() {
           <ActionIcon variant="subtle" onClick={() => { setEditing(p); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
             <AnimatedEdit size={16} />
           </ActionIcon>
+          <Tooltip label="Duplicate provider" withArrow>
+            <ActionIcon variant="subtle" color="violet" onClick={() => handleCloneProvider(p)} component={motion.button} whileHover="hover">
+              <AnimatedCopy size={16} />
+            </ActionIcon>
+          </Tooltip>
           <ActionIcon variant="subtle" color="teal" onClick={() => handleTest(p.id)} component={motion.button} whileHover="hover">
             <AnimatedFlask size={16} />
           </ActionIcon>
@@ -233,6 +255,11 @@ export default function ProvidersPage() {
           <ActionIcon variant="subtle" onClick={() => { setEditing(d); setDrawerOpen(true); }} component={motion.button} whileHover="hover">
             <AnimatedEdit size={16} />
           </ActionIcon>
+          <Tooltip label="Duplicate deployment" withArrow>
+            <ActionIcon variant="subtle" color="violet" onClick={() => handleCloneDeployment(d)} component={motion.button} whileHover="hover">
+              <AnimatedCopy size={16} />
+            </ActionIcon>
+          </Tooltip>
           <ActionIcon variant="subtle" color="red" onClick={() => handleDelete("deployments", d.id)} component={motion.button} whileHover="hover">
             <AnimatedTrash size={16} />
           </ActionIcon>
@@ -326,16 +353,18 @@ export default function ProvidersPage() {
 
       <ProviderDrawer
         opened={drawerOpen && tab === "providers"}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); setCloneProvider(null); }}
         editing={editing as Provider | null}
-        onSaved={async () => { setDrawerOpen(false); await loadProviders(); }}
+        clone={cloneProvider}
+        onSaved={async () => { setDrawerOpen(false); setCloneProvider(null); await loadProviders(); }}
       />
       <DeploymentDrawer
         opened={drawerOpen && tab === "deployments"}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); setCloneDeployment(null); }}
         editing={editing as Deployment | null}
+        clone={cloneDeployment}
         providers={providers}
-        onSaved={async () => { setDrawerOpen(false); await loadDeployments(); }}
+        onSaved={async () => { setDrawerOpen(false); setCloneDeployment(null); await loadDeployments(); }}
       />
       <ProviderKeyDrawer
         opened={drawerOpen && tab === "keys"}
@@ -562,8 +591,8 @@ function ProviderInfoDrawer({ provider, onClose }: { provider: Provider | null; 
 
 // ─── Provider CRUD Drawer ─────────────────────────────────────────────────────
 function ProviderDrawer({
-  opened, onClose, editing, onSaved,
-}: { opened: boolean; onClose: () => void; editing: Provider | null; onSaved: () => void }) {
+  opened, onClose, editing, clone, onSaved,
+}: { opened: boolean; onClose: () => void; editing: Provider | null; clone?: Provider | null; onSaved: () => void }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [adapterType, setAdapterType] = useState("litellm");
@@ -572,15 +601,20 @@ function ProviderDrawer({
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Populate from editing record OR from clone template (clone takes priority when editing is null)
   useEffect(() => {
     if (opened) {
-      setName(editing?.name ?? "");
-      setAdapterType(editing?.adapter_type ?? "litellm");
-      setBaseUrl(editing?.base_url ?? "");
-      setConfig(editing ? JSON.stringify(editing.config, null, 2) : "{}");
-      setEnabled(editing?.is_enabled ?? true);
+      const src = editing ?? clone ?? null;
+      setName(src?.name ?? "");
+      setAdapterType(src?.adapter_type ?? "litellm");
+      setBaseUrl(src?.base_url ?? "");
+      setConfig(src ? JSON.stringify(src.config, null, 2) : "{}");
+      setEnabled(src?.is_enabled ?? true);
     }
-  }, [opened, editing]);
+  }, [opened, editing, clone]);
+
+  const isClone = !editing && !!clone;
+  const drawerTitle = editing ? "Edit Provider" : isClone ? "Duplicate Provider" : "Add Provider";
 
   const handleSave = async () => {
     setSaving(true);
@@ -592,15 +626,17 @@ function ProviderDrawer({
       } else {
         await api.post("/api/admin/providers", { name, adapter_type: adapterType, base_url: baseUrl || null, config: parsed, is_enabled: enabled });
       }
-      toast("Provider saved", "success");
+      toast(editing ? "Provider saved" : isClone ? "Provider duplicated" : "Provider created", "success");
       onSaved();
     } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
     finally { setSaving(false); }
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Provider" : "Add Provider"} icon={<AnimatedServer size={16} />} iconColor="teal">
-      <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+    <CgDrawer opened={opened} onClose={onClose} title={drawerTitle} icon={isClone ? <AnimatedCopy size={16} /> : <AnimatedServer size={16} />} iconColor={isClone ? "violet" : "teal"}>
+      <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} required
+        description={isClone ? "Give this duplicate a unique name before saving." : undefined}
+        styles={isClone ? { input: { borderColor: "var(--mantine-color-violet-5)" } } : undefined} />
       {!editing && (
         <Select label="Adapter Type" value={adapterType} onChange={(v) => setAdapterType(v || "litellm")} data={[{ value: "litellm", label: "litellm" }]} />
       )}
@@ -608,15 +644,18 @@ function ProviderDrawer({
       <Textarea label="Config (JSON)" value={config} onChange={(e) => setConfig(e.target.value)} rows={5} ff="monospace"
         description='Tip: add {"api_key": "your-key"} here to authenticate with the provider.' />
       <Switch label="Enabled" checked={enabled} onChange={(e) => setEnabled(e.currentTarget.checked)} />
-      <Button onClick={handleSave} loading={saving} fullWidth variant="gradient" gradient={{ from: "brand", to: "teal", deg: 90 }}>Save</Button>
+      <Button onClick={handleSave} loading={saving} fullWidth variant="gradient"
+        gradient={{ from: isClone ? "violet" : "brand", to: isClone ? "indigo" : "teal", deg: 90 }}>
+        {isClone ? "Save Duplicate" : "Save"}
+      </Button>
     </CgDrawer>
   );
 }
 
 // ─── Deployment CRUD Drawer ───────────────────────────────────────────────────
 function DeploymentDrawer({
-  opened, onClose, editing, providers, onSaved,
-}: { opened: boolean; onClose: () => void; editing: Deployment | null; providers: Provider[]; onSaved: () => void }) {
+  opened, onClose, editing, clone, providers, onSaved,
+}: { opened: boolean; onClose: () => void; editing: Deployment | null; clone?: Deployment | null; providers: Provider[]; onSaved: () => void }) {
   const { toast } = useToast();
   const [providerId, setProviderId] = useState("");
   const [modelName, setModelName] = useState("");
@@ -628,18 +667,23 @@ function DeploymentDrawer({
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Populate from editing record OR from clone template (clone takes priority when editing is null)
   useEffect(() => {
     if (opened) {
-      setProviderId(editing?.provider_id ?? providers[0]?.id ?? "");
-      setModelName(editing?.model_name ?? "");
-      setLitellmModel(editing?.litellm_model ?? "");
-      setParams(editing ? JSON.stringify(editing.litellm_params, null, 2) : "{}");
-      setTpm(editing?.tpm ?? "");
-      setRpm(editing?.rpm ?? "");
-      setCtx(editing?.context_window ?? "");
-      setEnabled(editing?.is_enabled ?? true);
+      const src = editing ?? clone ?? null;
+      setProviderId(src?.provider_id ?? providers[0]?.id ?? "");
+      setModelName(src?.model_name ?? "");
+      setLitellmModel(src?.litellm_model ?? "");
+      setParams(src ? JSON.stringify(src.litellm_params, null, 2) : "{}");
+      setTpm(src?.tpm ?? "");
+      setRpm(src?.rpm ?? "");
+      setCtx(src?.context_window ?? "");
+      setEnabled(src?.is_enabled ?? true);
     }
-  }, [opened, editing, providers]);
+  }, [opened, editing, clone, providers]);
+
+  const isClone = !editing && !!clone;
+  const drawerTitle = editing ? "Edit Deployment" : isClone ? "Duplicate Deployment" : "Add Deployment";
 
   const handleSave = async () => {
     setSaving(true);
@@ -652,17 +696,21 @@ function DeploymentDrawer({
       };
       if (editing) await api.patch(`/api/admin/deployments/${editing.id}`, body);
       else await api.post("/api/admin/deployments", body);
-      toast("Deployment saved", "success");
+      toast(editing ? "Deployment saved" : isClone ? "Deployment duplicated" : "Deployment created", "success");
       onSaved();
     } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
     finally { setSaving(false); }
   };
 
   return (
-    <CgDrawer opened={opened} onClose={onClose} title={editing ? "Edit Deployment" : "Add Deployment"} size="lg" icon={<AnimatedGitBranch size={16} />} iconColor="orange">
+    <CgDrawer opened={opened} onClose={onClose} title={drawerTitle} size="lg"
+      icon={isClone ? <AnimatedCopy size={16} /> : <AnimatedGitBranch size={16} />}
+      iconColor={isClone ? "violet" : "orange"}>
       <Select label="Provider" value={providerId} onChange={(v) => setProviderId(v ?? "")} disabled={!!editing}
         data={providers.map((p) => ({ value: p.id, label: p.name }))} />
-      <TextInput label="Model Name (alias)" value={modelName} onChange={(e) => setModelName(e.target.value)} required />
+      <TextInput label="Model Name (alias)" value={modelName} onChange={(e) => setModelName(e.target.value)} required
+        description={isClone ? "Give this duplicate a unique alias before saving." : undefined}
+        styles={isClone ? { input: { borderColor: "var(--mantine-color-violet-5)" } } : undefined} />
       <TextInput label="LiteLLM Model" value={litellmModel} onChange={(e) => setLitellmModel(e.target.value)} required />
       <Textarea label="litellm_params (JSON)" value={params} onChange={(e) => setParams(e.target.value)} rows={4} ff="monospace" />
       <Group grow>
@@ -671,7 +719,10 @@ function DeploymentDrawer({
         <NumberInput label="Context" value={ctx} onChange={(v) => setCtx(v as number)} />
       </Group>
       <Switch label="Enabled" checked={enabled} onChange={(e) => setEnabled(e.currentTarget.checked)} />
-      <Button onClick={handleSave} loading={saving} fullWidth variant="gradient" gradient={{ from: "brand", to: "orange", deg: 90 }}>Save</Button>
+      <Button onClick={handleSave} loading={saving} fullWidth variant="gradient"
+        gradient={{ from: isClone ? "violet" : "brand", to: isClone ? "indigo" : "orange", deg: 90 }}>
+        {isClone ? "Save Duplicate" : "Save"}
+      </Button>
     </CgDrawer>
   );
 }
